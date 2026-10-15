@@ -13,6 +13,8 @@ import QuickLog from '../components/QuickLog.jsx';
 import GoalDetailSheet from '../components/GoalDetailSheet.jsx';
 import { apiFetch } from '../../../lib/apiClient.js';
 import { safeGet } from '../../../lib/storage.js';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { formatWeight } from '../../../lib/units.js';
 import ErrorState from '../../../components/feedback/ErrorState.jsx';
 
 // Dashboard follows the app 2-color theme (white + deep green) via CSS vars,
@@ -133,6 +135,8 @@ const Dashboard = () => {
   };
   const { data, biometrics, workouts, dashboardError, setData, setBiometrics, setAuthOverride, mergeData, refresh: refreshDashboard, generateClinicalInsight } = useDashboardData(USER_ID);
   const { goal, currentWeightKg, progressPct, refresh: refreshGoal } = useActiveGoal(USER_ID);
+  const units = useUnits();
+  const fmtW = (v) => (v == null || v === '—' ? '—' : formatWeight(Number(v), units));
   const { meals, refreshMeals } = useTodayMeals(USER_ID);
   useEffect(() => { if (!user) return; setAuthOverride(user.name || null, user.avatar || null); }, [user, setAuthOverride]);
   const { handleLogActivity } = useActivityLogger(USER_ID, { setData, setBiometrics, biometrics, mergeData, generateClinicalInsight });
@@ -320,7 +324,7 @@ const Dashboard = () => {
                 <p className="text-[12px] text-[var(--text-muted)] mt-1">Workouts and rest today</p>
                 {goal && (
                   <p className="text-[12px] font-bold text-[var(--accent)] mt-1.5 truncate">
-                    {goalLabel(goal.goalType)}{goal.targetWeightKg != null ? ` · ${currentWeightKg ?? goal.weightKg ?? '—'} → ${goal.targetWeightKg} kg` : ''}
+                    {goalLabel(goal.goalType)}{goal.targetWeightKg != null ? ` · ${fmtW(currentWeightKg ?? goal.weightKg)} → ${fmtW(goal.targetWeightKg)}` : ''}
                   </p>
                 )}
                 <div className="mt-4 space-y-3.5">
@@ -495,7 +499,7 @@ const Dashboard = () => {
                 <div className="mt-2">
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="text-[13px] font-black text-[var(--text-primary)] truncate">
-                      {currentWeightKg ?? goal.weightKg ?? '—'}<span className="font-bold text-[var(--text-muted)]"> – {goal.targetWeightKg} kg</span>
+                      {fmtW(currentWeightKg ?? goal.weightKg)}<span className="font-bold text-[var(--text-muted)]"> – {fmtW(goal.targetWeightKg)}</span>
                     </p>
                     {progressPct != null && (
                       <span className="text-[12px] font-black text-[var(--accent)] shrink-0">{progressPct}%</span>

@@ -72,6 +72,15 @@ const DayTracker = ({ plan, content, progress, onClose, onCompleteDay }) => {
 
   const handleStartWorkout = () => {
     if (!activeDayData) return;
+    // The day's exercise list travels along so the workout screen can
+    // auto-select each workout in order — no manual picking.
+    const exercises = (activeDayData.exercises || []).map((ex) => ({
+      name:             ex.name,
+      sets:             ex.sets ?? null,
+      reps:             ex.reps ?? null,
+      durationSeconds:  ex.durationSeconds ?? null,
+      restSeconds:      ex.restSeconds ?? null,
+    }));
     navigate('/dashboard/workouts', {
       state: {
         fromPlan: {
@@ -82,6 +91,7 @@ const DayTracker = ({ plan, content, progress, onClose, onCompleteDay }) => {
           activityType: activeDayData.activity_type,
           description:  activeDayData.description,
           durationMins: activeDayData.duration_mins,
+          exercises,
         },
       },
     });

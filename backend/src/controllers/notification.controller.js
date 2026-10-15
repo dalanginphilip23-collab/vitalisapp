@@ -1,6 +1,5 @@
 const db = require('../config/db');
 const log = require('../utils/logger');
-const { requireOwner } = require('../utils/owner');
 // One entry per tab/device: a user may stream from phone + desktop at once.
 const clients = new Map(); // userId -> Set<res>
 

@@ -1,9 +1,6 @@
 
 const db = require('../config/db');
 const log = require('../utils/logger');
-const express = require('express');
-const verifyUser = require('../middleware/verifyUser');
-const { requireOwner } = require('../utils/owner');
 const { calcReadiness } = require('../utils/readiness');
 // GET /api/stats/daily/:userId
 
@@ -15,11 +12,9 @@ async function getdailyUserId(req,res,next){
         return res.status(400).json({ error: 'Invalid user ID' });
       }
     
-      const today = new Date().toISOString().slice(0, 10);
-    
       try {
         // Use CURDATE() (DB-local) as source of truth — avoids UTC off-by-one
-        // when app TZ != UTC. `today` kept only for response echo.
+        // when app TZ != UTC.
         const [stats] = await db.execute(
           'SELECT calories_burned, steps, workout_duration_mins FROM daily_stats WHERE user_id = ? AND stat_date = CURDATE()',
           [userId]
@@ -49,7 +44,6 @@ async function getreadinessUserId(req,res,next){
         return res.status(400).json({ error: 'Invalid user ID' });
       }
       try {
-        const today = new Date().toISOString().slice(0, 10);
         const [stats] = await db.execute(
           'SELECT calories_burned, steps, workout_duration_mins FROM daily_stats WHERE user_id = ? AND stat_date = CURDATE()',
           [userId]

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/Icon.jsx';
 import Dropdown from '../../../components/ui/Dropdown.jsx';
 import {
-  BRYL_CREDIT,
   frameUrl,
   getAllGuideExercises,
   guideFilterOptions,
@@ -76,10 +75,6 @@ const ExerciseLibrary = () => {
           );
         })}
       </div>
-      <p className="text-[10px] mt-3 leading-relaxed text-[var(--text-muted)]">
-        {BRYL_CREDIT}
-      </p>
-
       {open && (
         <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center sm:p-4 overflow-y-auto bg-[var(--bg-overlay)]"
           onClick={() => setOpenSlug(null)}>
@@ -131,7 +126,6 @@ const ExerciseLibrary = () => {
                 Start {isHoldExercise(open) ? 'Hold' : 'Workout'}
               </button>
             </div>
-            <p className="text-[9px] mt-3 leading-relaxed text-[var(--text-muted)]">{BRYL_CREDIT}</p>
           </div>
         </div>
       )}

@@ -17,19 +17,20 @@ export default function StartStopButton({ isRecording, cameraOn, onPress }) {
       onClick={handlePress}
       disabled={disabled}
       aria-busy={busy || undefined}
-      className={`flex-shrink-0 px-4 sm:px-8 py-2 rounded-full font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all active:scale-95 flex items-center gap-1.5 sm:gap-2 touch-manipulation disabled:opacity-40 disabled:cursor-not-allowed ${
+      aria-label={isRecording ? 'End workout' : 'Start workout'}
+      title={!cameraOn ? 'Turn the camera on to start' : undefined}
+      className={`w-full min-h-[56px] px-6 py-4 rounded-2xl font-extrabold text-[14px] uppercase tracking-[0.12em] transition-all active:scale-[0.98] flex items-center justify-center gap-2 touch-manipulation disabled:opacity-60 disabled:cursor-not-allowed ${
         isRecording
           ? 'bg-red-500 text-white shadow-[var(--shadow-md)]'
           : 'bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] shadow-[var(--shadow-md)]'
       }`}
     >
       {busy ? (
-        <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin inline-block" aria-hidden="true" />
+        <span className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin inline-block" aria-hidden="true" />
       ) : (
-        <Icon name={isRecording ? 'stop' : 'play_arrow'} className="text-xs sm:text-sm" fill={1} />
+        <Icon name={isRecording ? 'stop' : 'play_arrow'} className="text-[20px]" fill={1} />
       )}
-      <span className="hidden sm:inline">{busy ? 'Please wait…' : isRecording ? 'End Workout' : 'Start Workout'}</span>
-      <span className="sm:hidden">{busy ? '…' : isRecording ? 'End' : 'Start'}</span>
+      <span>{busy ? 'Please wait…' : isRecording ? 'End Workout' : 'Start Workout'}</span>
     </button>
   );
 }

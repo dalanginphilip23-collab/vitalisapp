@@ -4,12 +4,11 @@ import {
   getPickerOptions,
   searchGuideExercises,
   frameUrl,
-  BRYL_CREDIT,
   guideFilterOptions,
   getAllGuideExercises,
 } from '../constants/workoutGuide.js';
 
-// Workout chooser: pick a real Bryl exercise first, camera opens after.
+// Workout chooser: pick an exercise first, camera opens after.
 export default function WorkoutChooser({ query, onQuery, onPick, onBack }) {
   const [equipment, setEquipment] = useState('');
   const [muscle, setMuscle] = useState('');
@@ -50,7 +49,7 @@ export default function WorkoutChooser({ query, onQuery, onPick, onBack }) {
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--accent)]">Workouts</p>
             <h2 className="text-[18px] sm:text-[20px] font-black tracking-tight leading-tight">Choose your workout</h2>
-            <p className="text-[12px] text-[var(--text-muted)] mt-0.5 leading-snug">Real Bryl exercises — camera opens after you pick one.</p>
+            <p className="text-[12px] text-[var(--text-muted)] mt-0.5 leading-snug">Choose an exercise — camera opens after you pick one.</p>
           </div>
         </div>
         <div className="relative mt-4">
@@ -136,7 +135,6 @@ export default function WorkoutChooser({ query, onQuery, onPick, onBack }) {
             </button>
           </div>
         )}
-        <p className="text-[10px] mt-4 leading-relaxed text-[var(--text-muted)]">{BRYL_CREDIT}</p>
       </div>
     </main>
   );

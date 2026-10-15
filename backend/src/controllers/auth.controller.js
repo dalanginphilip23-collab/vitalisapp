@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const crypto     = require('crypto');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
 const rateLimit  = require('express-rate-limit');
@@ -117,7 +118,7 @@ async function getme(req,res,next){
             onboardingCompleted: Boolean(user.onboarding_completed),
           },
         });
-      } catch (err) {
+      } catch {
         res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
         return res.status(401).json({ error: 'Invalid session', code: 'INVALID_SESSION', user: null });
       }

@@ -2,10 +2,13 @@ import { Link } from 'react-router-dom';
 import Eyebrow from './Eyebrow.jsx';
 import { goalLabel, activityLabel } from '../../Onboarding/constants/goals.js';
 import { humanize } from '../utils/metrics.js';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { formatWeight } from '../../../lib/units.js';
 
 // Goal snapshot card — the single home for onboarding goal details.
 // Rendered inside the "My Goals" section (not duplicated in Body Metrics).
 const GoalSnapshotCard = ({ onboarding, onChangeGoal }) => {
+  const units = useUnits();
   if (!onboarding) {
     return (
       <div className="text-center py-3 bg-[var(--bg-hover)] border border-[var(--border-light)] rounded-[12px] space-y-2">
@@ -22,7 +25,7 @@ const GoalSnapshotCard = ({ onboarding, onChangeGoal }) => {
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Goal</p>
           <p className="text-[13px] font-bold text-[var(--accent)] mt-1">{goalLabel(onboarding.goalType)}</p>
           {onboarding.focus && <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{humanize(onboarding.focus)}</p>}
-          {onboarding.targetWeightKg != null && <p className="text-[11px] text-[var(--text-muted)] mt-0.5 tabular-nums">Target: {Number(onboarding.targetWeightKg).toFixed(1)} kg</p>}
+          {onboarding.targetWeightKg != null && <p className="text-[11px] text-[var(--text-muted)] mt-0.5 tabular-nums">Target: {formatWeight(onboarding.targetWeightKg, units)}</p>}
         </div>
         <div className="bg-[var(--bg-hover)] border border-[var(--border-light)] rounded-[12px] p-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Activity</p>

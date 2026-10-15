@@ -129,11 +129,13 @@ const usePlans = () => {
   };
 
   // ── Create a personal plan (user-owned, auto-enrolled) ──────────
-  const createPersonal = async ({ title, tag, intensity, targetFocus, durationDays, description }) => {
+  // goalType filters the workout picker; exercises are the user's picks
+  // (server falls back to goal/tag starters when the list is empty).
+  const createPersonal = async ({ title, tag, intensity, targetFocus, durationDays, description, goalType, exercises }) => {
     setActing(true); setActionError(null); setActionOk(null);
     try {
       const data = await apiPost('/api/plans', {
-        title, tag, intensity, targetFocus, durationDays, description,
+        title, tag, intensity, targetFocus, durationDays, description, goalType, exercises,
       });
       setActionOk('Plan created — find it in My Plans.');
       await fetchMarketplace();

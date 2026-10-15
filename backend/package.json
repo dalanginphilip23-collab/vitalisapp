@@ -9,7 +9,8 @@
     "test:integration": "node --test \"tests/integration/**/*.test.js\"",
     "test:watch": "node --test --watch \"tests/**/*.test.js\"",
     "test:coverage": "node --test --experimental-test-coverage \"tests/**/*.test.js\"",
-    "lint": "node scripts/check-syntax.js",
+    "lint": "eslint . && node scripts/check-syntax.js",
+    "lint:syntax": "node scripts/check-syntax.js",
     "start": "node server.js",
     "start:prod": "node start-prod.js",
     "dev": "node --watch server.js",
@@ -21,7 +22,11 @@
   "engines": {
     "node": ">=20"
   },
-  "keywords": ["fitness", "express", "mysql"],
+  "keywords": [
+    "fitness",
+    "express",
+    "mysql"
+  ],
   "author": "Vitalis",
   "license": "MIT",
   "dependencies": {
@@ -43,7 +48,10 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.4",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
     "supertest": "^6.3.4"
   }
 }

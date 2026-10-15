@@ -8,7 +8,7 @@ describe('GET /api/health', () => {
     let createApp;
     try {
       createApp = require('../../src/app');
-    } catch (e) {
+    } catch {
       // env fail-fast in prod — acceptable skip in bare CI
       return;
     }

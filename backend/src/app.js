@@ -105,7 +105,7 @@ function createApp(io) {
         ),
       ]);
       res.json({ ok: true, db: "up", time: new Date().toISOString() });
-    } catch (e) {
+    } catch {
       res
         .status(503)
         .json({ ok: false, db: "down", time: new Date().toISOString() });

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet, apiPost } from '../../../lib/apiClient.js';
 import { useToastStore } from '../../../stores/toastStore.js';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { lbToKg, round1 } from '../../../lib/units.js';
 import Button from '../../../components/ui/Button.jsx';
 import Spinner from '../../../components/ui/Spinner.jsx';
 
@@ -18,11 +20,18 @@ const QuickLog = ({ userId, onWeightLogged, onCheckIn }) => {
 
   const close = () => { setOpen(false); setMode('menu'); setWeight(''); setWeightError(''); };
 
+  const units = useUnits();
+  const imperial = units === 'imperial';
+
   const logWeight = async (e) => {
     e.preventDefault();
-    const w = Number(weight);
-    if (weighing || !Number.isFinite(w) || w < 30 || w > 300) {
-      setWeightError('Enter a valid weight (30–300 kg).');
+    const raw = Number(weight);
+    // Backend stays metric — convert imperial input at the edge.
+    const w = imperial ? lbToKg(raw) : raw;
+    const lo = imperial ? 55 : 25;
+    const hi = imperial ? 770 : 350;
+    if (weighing || !Number.isFinite(raw) || raw < lo || raw > hi) {
+      setWeightError(imperial ? `Enter a valid weight (${lo}–${hi} lb).` : `Enter a valid weight (${lo}–${hi} kg).`);
       return;
     }
     setWeighing(true);
@@ -33,7 +42,7 @@ const QuickLog = ({ userId, onWeightLogged, onCheckIn }) => {
       const heightRaw = profile?.height_cm ?? profile?.profile?.height_cm;
       const height = Number(heightRaw);
       if (!Number.isFinite(height) || height < 50 || height > 300) throw new Error('Set your height in Profile first.');
-      const data = await apiPost(`/api/bmi/${userId}`, { weight_kg: w, height_cm: height });
+      const data = await apiPost(`/api/bmi/${userId}`, { weight_kg: round1(w), height_cm: height });
       onWeightLogged?.(data);
       close();
     } catch (err) {
@@ -88,8 +97,8 @@ const QuickLog = ({ userId, onWeightLogged, onCheckIn }) => {
               </>
             ) : (
               <form onSubmit={logWeight} className="p-2">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Log Weight (kg)</p>
-                <input type="number" min="30" max="300" step="0.1" autoFocus placeholder="e.g. 77.8"
+                <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Log Weight ({imperial ? 'lb' : 'kg'})</p>
+                <input type="number" min={imperial ? 55 : 25} max={imperial ? 770 : 350} step="0.1" autoFocus placeholder={imperial ? 'e.g. 171.5' : 'e.g. 77.8'}
                   value={weight} onChange={(e) => setWeight(e.target.value)}
                   className="w-full h-12 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[16px] outline-none focus:border-[var(--accent)]" />
                 {weightError && <p className="text-[11px] font-semibold text-[var(--error)] mt-2">{weightError}</p>}

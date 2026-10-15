@@ -32,6 +32,7 @@ export default function WebcamFeed({
   webcamRef,
   cameraOn,
   isRecording,
+  paused = false,
   poseReady,
   loadError,
   aiFeedback,
@@ -41,6 +42,7 @@ export default function WebcamFeed({
   landmarksRef,
   elapsedLabel,
   onStartStop,
+  onPauseToggle,
   tracking = false,
   hideRepCount = false,
 }) {
@@ -327,8 +329,49 @@ export default function WebcamFeed({
         </div>
       )}
 
+      {/* In-feed control bar (windowed mode): pause + Start/End + timer,
+          overlaid on the feed bottom so page scroll / BottomNav can never
+          cover it. Fullscreen keeps its own record-cluster below. */}
+      {!collapsed && !isFullscreen && (
+        <>
+          <div className="absolute bottom-0 left-0 right-0 h-28 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+          <div className="absolute bottom-3 inset-x-3 z-30 flex items-center gap-2.5">
+            <button
+              onClick={onPauseToggle}
+              disabled={!isRecording}
+              aria-label={paused ? 'Resume workout' : 'Pause workout'}
+              title={paused ? 'Resume' : 'Pause'}
+              className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-white/15 border border-white/30 backdrop-blur-md flex items-center justify-center shrink-0 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[24px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {paused ? 'play_arrow' : 'pause'}
+              </span>
+            </button>
+            <button
+              onClick={onStartStop}
+              disabled={!cameraOn}
+              aria-label={isRecording ? 'End workout' : 'Start workout'}
+              title={!cameraOn ? 'Turn the camera on to start' : undefined}
+              className={`flex-1 min-w-0 h-12 rounded-2xl font-extrabold text-[13px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 active:scale-[0.98] transition-all touch-manipulation disabled:opacity-60 disabled:cursor-not-allowed ${
+                isRecording
+                  ? 'bg-red-500 text-white shadow-lg'
+                  : 'bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] shadow-lg'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {isRecording ? 'stop' : 'play_arrow'}
+              </span>
+              <span className="truncate">{isRecording ? 'End Workout' : 'Start Workout'}</span>
+            </button>
+            <span className="shrink-0 px-2.5 py-1.5 rounded-full bg-black/50 backdrop-blur-sm text-[12px] font-bold tabular-nums text-white">
+              {elapsedLabel || '0:00'}
+            </span>
+          </div>
+        </>
+      )}
+
       {loadError && !collapsed && (
-        <div className="absolute bottom-3 left-3 z-30 bg-[var(--error-bg)] border border-[var(--error)]/30 px-3 py-1.5 rounded-xl">
+        <div className={`absolute left-3 z-30 bg-[var(--error-bg)] border border-[var(--error)]/30 px-3 py-1.5 rounded-xl ${isFullscreen ? 'bottom-3' : 'bottom-20'}`}>
           <p className="text-[9px] text-[var(--error)] font-bold uppercase tracking-widest">
             Pose AI failed to load — check your connection
           </p>

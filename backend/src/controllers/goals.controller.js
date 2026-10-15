@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const log = require('../utils/logger');
-const { calcBmi, generatePlan } = require('../utils/planEngine');
+const { generatePlan } = require('../utils/planEngine');
 const { validUserId } = require('../utils/ids');
 const { AppError } = require('../utils/errors');
 

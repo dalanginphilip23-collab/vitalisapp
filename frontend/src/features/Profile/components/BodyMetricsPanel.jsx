@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '../../../lib/apiClient.js';
 import { computeBMI, bmiCategory, calcBMR, activityFactors } from '../utils/metrics.js';
 import { activityLabel } from '../../Onboarding/constants/goals.js';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { kgToLb, lbToKg, cmToFtIn, ftInToCm, round1, formatWeight, formatHeight } from '../../../lib/units.js';
 
 const BodyMetricsPanel = ({ USER_ID, initialWeight, initialHeight, onboarding, showToast, onMetricsSaved, editSignal }) => {
+  const units = useUnits();
+  const imperial = units === 'imperial';
+  // Canonical state stays metric (backend + BMI/BMR math). Imperial inputs
+  // edit raw display strings that convert back on every keystroke.
   const [weight, setWeight] = useState(initialWeight || '');
   const [height, setHeight] = useState(initialHeight || '');
+  const [weightRaw, setWeightRaw] = useState('');
+  const [heightFtRaw, setHeightFtRaw] = useState('');
+  const [heightInRaw, setHeightInRaw] = useState('');
   const [age, setAge] = useState('23');
   const [gender, setGender] = useState('male');
   const [activity, setActivity] = useState('Sedentary');
@@ -38,6 +47,39 @@ const BodyMetricsPanel = ({ USER_ID, initialWeight, initialHeight, onboarding, s
     if (editSignal > 0) setEditing(true);
   }, [editSignal]);
 
+  // Snapshot metric state into imperial display strings when the editor
+  // opens (or units flip mid-edit) so typing never round-trips per keystroke.
+  useEffect(() => {
+    if (!editing || !imperial) return;
+    setWeightRaw(weight === '' ? '' : String(kgToLb(Number(weight))));
+    const { ft, inch } = cmToFtIn(Number(height) || 0);
+    setHeightFtRaw(height === '' ? '' : String(ft));
+    setHeightInRaw(height === '' ? '' : String(inch));
+  // weight/height intentionally snapshotted, not tracked.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, imperial]);
+
+  const onWeightRaw = (v) => {
+    setWeightRaw(v);
+    if (v === '') { setWeight(''); return; }
+    const n = Number(v);
+    if (Number.isFinite(n)) setWeight(String(lbToKg(n)));
+  };
+
+  const onHeightFtInRaw = (ftV, inV) => {
+    setHeightFtRaw(ftV);
+    setHeightInRaw(inV);
+    const ft = Number(ftV);
+    const inch = inV === '' ? 0 : Number(inV);
+    if (ftV !== '' && Number.isFinite(ft) && Number.isFinite(inch)) {
+      setHeight(String(ftInToCm(ft, inch)));
+    } else if (ftV === '' && inV === '') {
+      setHeight('');
+    }
+  };
+
+
+
   const bmi = computeBMI(height, weight);
   const bmr = calcBMR(weight, height, age, gender);
   const tdee = bmr ? Math.round(bmr * (activityFactors[activity] || 1.2)) : null;
@@ -59,11 +101,15 @@ const BodyMetricsPanel = ({ USER_ID, initialWeight, initialHeight, onboarding, s
 
   const handleSave = async () => {
     if (!weight || !height) { showToast?.('Enter weight and height', 'error'); return; }
+    const wKg = parseFloat(weight);
+    const hCm = parseFloat(height);
+    if (!Number.isFinite(wKg) || wKg < 25 || wKg > 350) { showToast?.(imperial ? 'Enter a valid weight (55–770 lb).' : 'Enter a valid weight (25–350 kg).', 'error'); return; }
+    if (!Number.isFinite(hCm) || hCm < 50 || hCm > 300) { showToast?.(imperial ? 'Enter a valid height.' : 'Enter a valid height (50–300 cm).', 'error'); return; }
     setIsSaving(true);
     try {
       await apiFetch(`/api/bmi/${USER_ID}`, {
         method: 'POST',
-        body: JSON.stringify({ weight_kg: parseFloat(weight), height_cm: parseFloat(height), age: age || null, gender }),
+        body: JSON.stringify({ weight_kg: round1(wKg), height_cm: round1(hCm), age: age || null, gender }),
       });
       showToast?.('Metrics saved — BMI updated');
       setEditing(false);
@@ -78,8 +124,22 @@ const BodyMetricsPanel = ({ USER_ID, initialWeight, initialHeight, onboarding, s
       {editing ? (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="min-w-0"><label htmlFor="bm-weight" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Weight (kg)</label><input id="bm-weight" type="number" min="30" max="300" step="0.1" value={weight} onChange={e=>setWeight(e.target.value)} placeholder="55.0" className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" /></div>
-            <div className="min-w-0"><label htmlFor="bm-height" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Height (cm)</label><input id="bm-height" type="number" min="50" max="300" step="0.5" value={height} onChange={e=>setHeight(e.target.value)} placeholder="185.0" className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" /></div>
+            {imperial ? (
+              <div className="min-w-0"><label htmlFor="bm-weight" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Weight (lb)</label><input id="bm-weight" type="number" min="55" max="770" step="0.2" value={weightRaw} onChange={e=>onWeightRaw(e.target.value)} placeholder="171.5" className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" /></div>
+            ) : (
+              <div className="min-w-0"><label htmlFor="bm-weight" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Weight (kg)</label><input id="bm-weight" type="number" min="25" max="350" step="0.1" value={weight} onChange={e=>setWeight(e.target.value)} placeholder="55.0" className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" /></div>
+            )}
+            {imperial ? (
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Height (ft / in)</span>
+                <div className="mt-1 flex gap-2">
+                  <input id="bm-height-ft" type="number" min="2" max="8" step="1" value={heightFtRaw} onChange={e=>onHeightFtInRaw(e.target.value, heightInRaw)} placeholder="6" aria-label="Height feet" className="w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+                  <input id="bm-height-in" type="number" min="0" max="11.9" step="0.5" value={heightInRaw} onChange={e=>onHeightFtInRaw(heightFtRaw, e.target.value)} placeholder="1" aria-label="Height inches" className="w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-0"><label htmlFor="bm-height" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Height (cm)</label><input id="bm-height" type="number" min="50" max="300" step="0.5" value={height} onChange={e=>setHeight(e.target.value)} placeholder="185.0" className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" /></div>
+            )}
             <div className="min-w-0"><label htmlFor="bm-age" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Age</label><input id="bm-age" type="number" min="5" max="120" value={age} onChange={e=>setAge(e.target.value)} placeholder="23" className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" /></div>
             <div className="min-w-0"><label htmlFor="bm-gender" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Gender</label><select id="bm-gender" value={gender} onChange={e=>setGender(e.target.value)} className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none"><option value="male">male</option><option value="female">female</option><option value="other">other</option></select></div>
             <div className="col-span-2"><label htmlFor="bm-activity" className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Activity Level</label><select id="bm-activity" value={activity} onChange={e=>setActivity(e.target.value)} className="mt-1 w-full h-12 min-h-[44px] rounded-xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] outline-none">{Object.keys(activityFactors).map(k=><option key={k} value={k}>{k}</option>)}</select></div>
@@ -92,8 +152,8 @@ const BodyMetricsPanel = ({ USER_ID, initialWeight, initialHeight, onboarding, s
       ) : hasResult ? (
         <>
           <div className="grid grid-cols-3 gap-2 text-center [&>div]:min-w-0">
-            <div className="bg-[var(--bg-hover)] border border-[var(--border-light)] rounded-[12px] px-2 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Weight</p><p className="text-[13px] font-bold text-[var(--text-primary)] mt-1 break-words tabular-nums">{parseFloat(weight).toFixed(1)} kg</p></div>
-            <div className="bg-[var(--bg-hover)] border border-[var(--border-light)] rounded-[12px] px-2 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Height</p><p className="text-[13px] font-bold text-[var(--text-primary)] mt-1 break-words tabular-nums">{parseFloat(height).toFixed(1)} cm</p></div>
+            <div className="bg-[var(--bg-hover)] border border-[var(--border-light)] rounded-[12px] px-2 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Weight</p><p className="text-[13px] font-bold text-[var(--text-primary)] mt-1 break-words tabular-nums">{formatWeight(weight, units)}</p></div>
+            <div className="bg-[var(--bg-hover)] border border-[var(--border-light)] rounded-[12px] px-2 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Height</p><p className="text-[13px] font-bold text-[var(--text-primary)] mt-1 break-words tabular-nums">{formatHeight(height, units)}</p></div>
             <div className="bg-[var(--bg-hover)] border border-[var(--accent-border)] rounded-[12px] px-2 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">BMI</p><p className="text-[15px] font-black tabular-nums" style={{ color: bmiInfo.color }}>{bmi}</p><p className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: bmiInfo.color }}>{bmiInfo.label}</p></div>
           </div>
           <div className="h-px bg-[var(--border-light)]" />

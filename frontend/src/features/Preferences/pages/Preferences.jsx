@@ -10,6 +10,7 @@ import { useAuth } from '../../../hooks/useAuth.jsx';
 import { useTheme } from '../../../hooks/useTheme.js';
 import { apiGet, apiFetch } from '../../../lib/apiClient.js';
 import { safeGet, safeSet } from '../../../lib/storage.js';
+import { notifyUnitsChanged } from '../../../lib/units.js';
 import { useToastStore } from '../../../stores/toastStore.js';
 
 const Preferences = () => {
@@ -68,6 +69,8 @@ const Preferences = () => {
       setStepGoal(Number(s.step_goal));
       safeSet('vitalis:units', s.units);
       safeSet('vitalis:stepGoal', String(s.step_goal));
+      // Wake every useUnits() subscriber so lb/ft shows up immediately.
+      notifyUnitsChanged();
     } catch (err) {
       // 401 = session cookie gone (expired/cleared) while a cached user was
       // still in memory. Route to login explicitly instead of a cryptic toast —

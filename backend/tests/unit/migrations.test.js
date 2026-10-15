@@ -18,10 +18,11 @@ const EXPECTED = [
   '024_user_plan_progress.sql', '025_user_plans.sql', '026_user_profiles.sql',
   '027_user_sessions.sql', '028_user_settings.sql', '029_workout_logs.sql',
   '030_seeds.sql', '031_landing_visits.sql', '032_personal_plans.sql',
+  '033_plan_goal_type.sql',
 ];
 
 describe('migrations per-table baseline', () => {
-  it('migrations/ holds exactly the 32 canonical files', () => {
+  it('migrations/ holds exactly the 33 canonical files', () => {
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
     assert.deepEqual(files, EXPECTED);
   });
@@ -61,6 +62,10 @@ describe('migrations per-table baseline', () => {
     assert.match(read('032_personal_plans.sql'), /ADD COLUMN `owner_user_id`/);
     assert.match(read('032_personal_plans.sql'), /ADD COLUMN `is_template`/);
     assert.match(read('032_personal_plans.sql'), /ADD COLUMN `source_plan_id`/);
+  });
+
+  it('plan goal_type alter is idempotent', () => {
+    assert.match(read('033_plan_goal_type.sql'), /ADD COLUMN `goal_type`/);
   });
 
   it('controllers reference only tables that migrations create', () => {

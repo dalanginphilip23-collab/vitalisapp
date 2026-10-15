@@ -10,7 +10,7 @@ function parseCookies(header) {
     if (idx === -1) continue;
     const k = part.slice(0, idx).trim();
     const raw = part.slice(idx + 1).trim();
-    let v = raw;
+    let v;
     try {
       v = decodeURIComponent(raw);
     } catch (_) {

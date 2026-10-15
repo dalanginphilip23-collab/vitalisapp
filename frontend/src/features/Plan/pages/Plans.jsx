@@ -3,7 +3,6 @@ import { useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNav, Sidebar, Topbar } from '../../../components/index.js';
 import Icon from '../../../components/Icon.jsx';
 import usePlans from '../hooks/usePlan.js';
-import { BRYL_CREDIT } from '../../CameraWorkout/constants/workoutGuide.js';
 import Dropdown from '../../../components/ui/Dropdown.jsx';
 import {
   REST_ACTIVITY_TYPES,
@@ -227,6 +226,7 @@ const Plans = () => {
         onGenerate={autoFromGoal}
         initial={editingPlan}
         onSave={handleSaveEdit}
+        activeGoalKey={goalStatus?.goal?.goalType}
       />
 
       <div className="md:hidden"><BottomNav variant="biometrics" /></div>

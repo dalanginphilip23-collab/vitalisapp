@@ -7,12 +7,18 @@ async function post(req,res,next){
   try{
         try {
     
-            const { name, email, message } = req.body || {};
-    
+            const { name, email, message, rating } = req.body || {};
+
             // VALIDATION (trim-first so whitespace-only is rejected)
             const tName = typeof name === 'string' ? name.trim() : '';
             const tEmail = typeof email === 'string' ? email.trim() : '';
             const tMessage = typeof message === 'string' ? message.trim() : '';
+            const tRating = typeof rating === 'string' && rating.trim() !== '' ? Number(rating) : rating;
+            if (!Number.isInteger(tRating) || tRating < 1 || tRating > 5) {
+                return res.status(400).json({
+                    error: 'A star rating from 1 to 5 is required.'
+                });
+            }
             if (!tName || !tEmail || !tMessage) {
                 return res.status(400).json({
                     error: 'All fields are required.'
@@ -31,43 +37,64 @@ async function post(req,res,next){
     
             // TRANSPORTER (singleton)
             const transporter = getTransporter();
-    
+
+            // Plain, human-looking note — no banners, no gradients. The stars
+            // are the only accent; low ratings get a muted red flag.
+            const stars = `${'★'.repeat(tRating)}${'☆'.repeat(5 - tRating)}`;
+            const needsAttention = tRating <= 2;
+            const receivedAt = new Date().toLocaleString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit',
+            });
+
             // EMAIL
             await transporter.sendMail({
-    
+
                 from: process.env.EMAIL_USER,
 
                 replyTo: tEmail,
-    
+
                 to: process.env.RECEIVER_EMAIL,
-    
-                subject: 'New Feedback Message',
-    
+
+                subject: `New Feedback ${stars} (${tRating}/5)${needsAttention ? ' — needs attention' : ''}`,
+
+                text:
+                    `New feedback\n` +
+                    `Rating: ${stars} (${tRating}/5)${needsAttention ? ' — NEEDS ATTENTION' : ''}\n` +
+                    `Name: ${tName}\n` +
+                    `Email: ${tEmail}\n` +
+                    `Date: ${receivedAt}\n\n` +
+                    `Message:\n${tMessage}\n`,
+
                 html: `
-                    <div style="font-family: Arial; padding: 20px;">
-    
-                        <h2>New Feedback</h2>
-    
-                        <p>
+                    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #222; max-width: 560px;">
+
+                        <p style="margin: 0 0 12px; font-size: 16px; font-weight: bold;">New feedback</p>
+
+                        <p style="margin: 0 0 6px;">
+                            <strong>Rating:</strong> <span style="color: #8a6d1b;">${stars}</span> (${tRating}/5)${needsAttention ? ' <span style="color: #b3261e; font-weight: bold;">&middot; needs attention</span>' : ''}
+                        </p>
+
+                        <p style="margin: 0 0 6px;">
                             <strong>Name:</strong> ${escapeHtml(tName)}
                         </p>
-    
-                        <p>
+
+                        <p style="margin: 0 0 6px;">
                             <strong>Email:</strong> ${escapeHtml(tEmail)}
                         </p>
-    
-                        <p>
+
+                        <p style="margin: 0 0 6px;">
                             <strong>Message:</strong>
                         </p>
-    
-                        <div style="
-                            background: #f4f4f4;
-                            padding: 15px;
-                            border-radius: 8px;
-                        ">
-                            ${escapeHtml(tMessage)}
+
+                        <div style="border: 1px solid #ddd; border-radius: 6px; padding: 12px 14px; margin: 0 0 6px;">
+                            ${escapeHtml(tMessage).replace(/\n/g, '<br>')}
                         </div>
-    
+
+                        <p style="margin: 16px 0 0; font-size: 12px; color: #888;">
+                            ${receivedAt} &middot; Sent from Vitalis Feedback. Reply to this email to reach the user directly.
+                        </p>
+
                     </div>
                 `
             });

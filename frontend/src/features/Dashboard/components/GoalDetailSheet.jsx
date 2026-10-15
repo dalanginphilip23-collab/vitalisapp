@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { GOAL_TYPES, goalLabel } from '../../Onboarding/constants/goals.js';
 import ChangeGoalModal from '../../Profile/components/ChangeGoalModal.jsx';
 import { useToastStore } from '../../../stores/toastStore.js';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { formatWeight } from '../../../lib/units.js';
 
 const goalIcon = (goalType) => GOAL_TYPES.find((g) => g.key === goalType)?.icon || 'flag';
 
@@ -19,6 +21,8 @@ export default function GoalDetailSheet({ userId, goal, currentWeightKg, progres
     } catch { /* noop */ }
   };
 
+  const units = useUnits();
+  const fmtW = (v) => (v == null ? '—' : formatWeight(v, units));
   const startKg = goal?.weightKg != null ? Number(goal.weightKg) : null;
   const targetKg = goal?.targetWeightKg != null ? Number(goal.targetWeightKg) : null;
   const currentKg = currentWeightKg != null ? Number(currentWeightKg) : startKg;
@@ -94,11 +98,11 @@ export default function GoalDetailSheet({ userId, goal, currentWeightKg, progres
                 )}
               </div>
               <p className="text-[14px] font-bold mt-1.5">
-                {startKg != null ? `${startKg} kg` : '—'}
+                {fmtW(startKg)}
                 <span className="text-[var(--text-muted)] font-semibold"> → </span>
-                {currentKg != null ? `${currentKg} kg` : '—'}
+                {fmtW(currentKg)}
                 <span className="text-[var(--text-muted)] font-semibold"> → </span>
-                {targetKg} kg
+                {fmtW(targetKg)}
               </p>
               {progressPct != null && (
                 <div className="h-2 bg-[var(--bg-active)] rounded-full mt-2.5 overflow-hidden">

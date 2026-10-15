@@ -111,12 +111,14 @@ Only `.env.example` files are tracked. Never commit real `.env` files.
 
 ## Testing
 
-Backend (85 tests, 22 suites): activity accuracy, AI stability, plan
-engine, validation schemas, migrations count and idempotency, auth and
-community/settings guards, per-device session revocation, env fail-fast
-guards, and friends-only socket relay. Frontend (30 tests, 13 suites):
-avatar helpers plus pure utils (`sleepScore`, `metrics`, `dateKey`).
-Run the backend and frontend suites separately before pushing.
+Backend (97 tests, 25 suites): activity accuracy, AI stability, plan
+engine, validation schemas, migrations count and idempotency, auth flows
+(verify-email hashing, Google signup), auth and community/settings
+guards, per-device session revocation, env fail-fast guards, and
+friends-only socket relay. Frontend (36 tests, 14 suites): avatar helpers
+plus pure utils (`sleepScore`, `metrics`, `dateKey`). Both suites run in
+CI (`.github/workflows/ci.yml`) on Node 20 and 24, together with ESLint
+(`npm run lint`).
 
 ## Architecture
 

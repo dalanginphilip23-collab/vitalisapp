@@ -1,11 +1,11 @@
-// workoutGuide.js — Bryl Lim catalog adapter + mode router.
-// Real data: all 302 exercises from @bryllim/workout-guide manifest.
+// workoutGuide.js — exercise catalog adapter + mode router.
+// Real data: all 302 exercises from the workout-guide manifest.
 // Every exercise resolves to exactly one functional mode — never guide-only:
 //   REP mode  = weight_reps | bodyweight_reps | assisted_bodyweight
 //   HOLD mode = duration | distance_duration | isStretch
 import { exercises, getExercise, searchExercises, getAssetUrl } from '@bryllim/workout-guide';
 
-// Bryl slug -> internal rep-counter type (useRepCounter switch cases).
+// Guide slug -> internal rep-counter type (useRepCounter switch cases).
 // Unmapped slugs fall through to 'generic' (existing default branch).
 const SLUG_TO_COUNTER = {
   'push-up': 'pushup',
@@ -54,7 +54,60 @@ export function frameUrl(slug, frame = 1) {
   }
 }
 
-// Resolve any id (legacy 'pushup' or Bryl 'push-up') to a working workout object.
+// Legacy internal ids and their display labels (plan starter names match these).
+const LEGACY_LABELS = {
+  pushup: 'Push-Ups', squat: 'Squats', plank: 'Plank', lunge: 'Lunges',
+  overhead: 'OH Press', dip: 'Dips', burpee: 'Burpees', jumpingjack: 'Jumping Jacks',
+  mountainclimb: 'Mountain Climbers', highknee: 'High Knees', glute_bridge: 'Glute Bridge',
+  crunch: 'Crunches', situp: 'Sit-Ups', bicep_curl: 'Bicep Curls', tricep_ext: 'Tricep Ext.',
+  lateral_raise: 'Lateral Raise', deadlift: 'Deadlift', hip_thrust: 'Hip Thrust',
+  sideplank: 'Side Plank', boxjump: 'Box Jumps', pullup: 'Pull-Ups', calfraise: 'Calf Raises',
+};
+
+const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Resolve a free-text plan exercise name ('Dumbbell Bench Press', 'Push-Ups',
+// 'Bodyweight Squats') to a workout id. Returns null when nothing matches —
+// callers skip unresolvable rows (e.g. stretches the camera can't count).
+export function resolveExerciseName(name) {
+  if (!name) return null;
+  // 1. Direct slug hit ('push-up').
+  try {
+    if (getExercise(name)) return getExercise(name).slug;
+  } catch { /* fall through */ }
+  // 2. Slugified hit ('Push Ups' -> 'push-ups'... covers dash/space variants).
+  const slugified = String(name).trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '');
+  try {
+    const hit = getExercise(slugified);
+    if (hit) return hit.slug;
+  } catch { /* fall through */ }
+  // 3. Exact guide display-name match ('Dumbbell Bench Press').
+  const want = normName(name);
+  for (const ex of exercises) {
+    if (normName(ex.name) === want) return ex.slug;
+  }
+  // 4. Legacy labels, exact then singular/plural-tolerant ('Dips' -> dip).
+  for (const [id, label] of Object.entries(LEGACY_LABELS)) {
+    const l = normName(label);
+    if (l === want) return id;
+  }
+  const singular = want.endsWith('s') ? want.slice(0, -1) : want;
+  for (const [id, label] of Object.entries(LEGACY_LABELS)) {
+    if (normName(label) === singular) return id;
+  }
+  // 5. Contains fallback for prefixed names ('Bodyweight Squats' -> squat).
+  // Longest label first so 'Mountain Climbers' beats shorter overlaps.
+  const labels = Object.entries(LEGACY_LABELS)
+    .map(([id, label]) => [id, normName(label)])
+    .filter(([, l]) => l.length >= 5)
+    .sort((a, b) => b[1].length - a[1].length);
+  for (const [id, l] of labels) {
+    if (want.includes(l)) return id;
+  }
+  return null;
+}
+
+// Resolve any id (legacy 'pushup' or guide 'push-up') to a working workout object.
 export function resolveWorkout(id) {
   if (!id) return null;
   const ex = getExercise(id);
@@ -76,14 +129,7 @@ export function resolveWorkout(id) {
     };
   }
   // Legacy fallback (kept for deep links / plan activityTypes).
-  const legacyLabels = {
-    pushup: 'Push-Ups', squat: 'Squats', plank: 'Plank', lunge: 'Lunges',
-    overhead: 'OH Press', dip: 'Dips', burpee: 'Burpees', jumpingjack: 'Jumping Jacks',
-    mountainclimb: 'Mountain Climbers', highknee: 'High Knees', glute_bridge: 'Glute Bridge',
-    crunch: 'Crunches', situp: 'Sit-Ups', bicep_curl: 'Bicep Curls', tricep_ext: 'Tricep Ext.',
-    lateral_raise: 'Lateral Raise', deadlift: 'Deadlift', hip_thrust: 'Hip Thrust',
-    sideplank: 'Side Plank', boxjump: 'Box Jumps', pullup: 'Pull-Ups', calfraise: 'Calf Raises',
-  };
+  const legacyLabels = LEGACY_LABELS;
   const holdLegacy = new Set(['plank', 'sideplank', 'glute_bridge']);
   if (legacyLabels[id]) {
     return {
@@ -110,7 +156,7 @@ export function prescriptionForGuide(exOrId) {
   return { sets: 3, reps: '10 reps', weight: 'Bodyweight' };
 }
 
-// Catalog helpers — real Bryl data.
+// Catalog helpers — real guide data.
 export function getAllGuideExercises() {
   return exercises;
 }
@@ -139,7 +185,7 @@ export function guideFilterOptions() {
   };
 }
 
-// Curated camera picker: real Bryl data, every entry functional (rep or hold).
+// Curated camera picker: real guide data, every entry functional (rep or hold).
 // Covers the previous 23-option set; unmapped extras live in the full library.
 const PICKER_SLUGS = [
   'push-up', 'squat', 'plank', 'walking-lunge', 'overhead-press', 'dip',
@@ -167,7 +213,7 @@ export function getPickerOptions() {
     if (!r) continue;
     opts.push({ id: r.id, label: r.name || r.label, icon: PICKER_ICONS[slug] || 'fitness_center', cue: r.cue, mode: r.mode });
   }
-  // Legacy extras with no Bryl match stay functional via generic counter.
+  // Legacy extras with no guide match stay functional via generic counter.
   opts.push(
     { id: 'tricep_ext', label: 'Tricep Ext.', icon: 'back_hand', cue: 'Stand or sit, arm extended overhead.', mode: 'rep' },
     { id: 'boxjump', label: 'Box Jumps', icon: 'upload_file', cue: 'Stand in front of the box, camera to your side.', mode: 'rep' },
@@ -175,4 +221,4 @@ export function getPickerOptions() {
   return opts;
 }
 
-export const BRYL_CREDIT = 'Original exercise artwork by Everkinetic, expanded by Bryl Lim, licensed under CC BY-SA 4.0.';
+

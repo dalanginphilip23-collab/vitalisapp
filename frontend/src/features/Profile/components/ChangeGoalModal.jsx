@@ -6,13 +6,22 @@ import {
   ACTIVITY_LEVELS, SLEEP_QUALITY, STRESS_LEVELS, EXERCISE_FREQ, RECOVERY_LEVELS,
   humanizeOption,
 } from '../../Onboarding/constants/goals.js';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { kgToLb, lbToKg } from '../../../lib/units.js';
 
 // Change Goal modal (master plan §12) — switch the active goal without replaying
 // onboarding. Body profile is carried forward server-side (PATCH /:userId/change).
 const ChangeGoalModal = ({ userId, currentGoal, onClose, onUpdated, showToast }) => {
+  const units = useUnits();
+  const imperial = units === 'imperial';
   const [goalType, setGoalType] = useState(currentGoal?.goalType || 'LOSE_WEIGHT');
+  // Canonical target stays metric (backend + direction validation).
   const [targetWeight, setTargetWeight] = useState(
     currentGoal?.targetWeightKg != null ? String(currentGoal.targetWeightKg) : ''
+  );
+  // Imperial display string — converted back to kg on every keystroke.
+  const [targetRaw, setTargetRaw] = useState(
+    currentGoal?.targetWeightKg != null && imperial ? String(kgToLb(Number(currentGoal.targetWeightKg))) : ''
   );
   const [pace, setPace] = useState(currentGoal?.pace || 'GRADUAL');
   const [activityLevel, setActivityLevel] = useState(currentGoal?.activityLevel || '');
@@ -26,9 +35,19 @@ const ChangeGoalModal = ({ userId, currentGoal, onClose, onUpdated, showToast })
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const onTargetRaw = (v) => {
+    setTargetRaw(v);
+    if (v === '') { setTargetWeight(''); return; }
+    const n = Number(v);
+    if (Number.isFinite(n)) setTargetWeight(String(lbToKg(n)));
+  };
+
   useEffect(() => {
     if (currentGoal?.goalType) setGoalType(currentGoal.goalType);
-    if (currentGoal?.targetWeightKg != null) setTargetWeight(String(currentGoal.targetWeightKg));
+    if (currentGoal?.targetWeightKg != null) {
+      setTargetWeight(String(currentGoal.targetWeightKg));
+      setTargetRaw(String(kgToLb(Number(currentGoal.targetWeightKg))));
+    }
     if (currentGoal?.pace) setPace(currentGoal.pace);
     if (currentGoal?.activityLevel) setActivityLevel(currentGoal.activityLevel);
     if (currentGoal?.sleepHours != null) setSleepHours(String(currentGoal.sleepHours));
@@ -111,9 +130,9 @@ const ChangeGoalModal = ({ userId, currentGoal, onClose, onUpdated, showToast })
           {needsTarget && (
             <>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Target Weight (kg)</label>
-                <input type="number" min="10" max="1000" step="0.1" placeholder="70"
-                  value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)}
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Target Weight ({imperial ? 'lb' : 'kg'})</label>
+                <input type="number" min={imperial ? 22 : 10} max={imperial ? 2200 : 1000} step="0.1" placeholder={imperial ? '154' : '70'}
+                  value={imperial ? targetRaw : targetWeight} onChange={(e) => (imperial ? onTargetRaw(e.target.value) : setTargetWeight(e.target.value))}
                   className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 outline-none focus:border-[var(--accent)]" />
               </div>
               {paceOptions.length > 0 && (

@@ -3,6 +3,8 @@ import { apiGet } from '../../../lib/apiClient.js';
 import ErrorState from '../../../components/feedback/ErrorState.jsx';
 import { useToastStore } from '../../../stores/toastStore.js';
 import { EmptyPanel } from './PageHeader.jsx';
+import { useUnits } from '../../../hooks/useUnits.js';
+import { formatWeight } from '../../../lib/units.js';
 
 export function ProgressHeader({ timeframe, setTimeframe, onBack }) {
   const opts = [
@@ -48,6 +50,7 @@ export function ProgressHeader({ timeframe, setTimeframe, onBack }) {
 }
 
 export function ProgressPanel({ userId, navigate }) {
+  const units = useUnits();
   const [data, setData] = React.useState({ bmi: [], volume: [] });
   const [loadError, setLoadError] = React.useState(null);
   const load = React.useCallback(() => {
@@ -149,7 +152,7 @@ export function ProgressPanel({ userId, navigate }) {
             {data.bmi.map((b, i) => (
               <div key={i} className="flex items-center justify-between text-[12px] border-b border-(--border-light) py-2">
                 <span className="font-bold">{b.date}</span>
-                <span className="text-(--text-muted)">{b.weight_kg} kg · BMI {b.bmi}</span>
+                <span className="text-(--text-muted)">{formatWeight(b.weight_kg, units)} · BMI {b.bmi}</span>
               </div>
             ))}
           </div>

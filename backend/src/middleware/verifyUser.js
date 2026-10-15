@@ -24,7 +24,7 @@ const verifyUser = async (req, res, next) => {
       clearSessionCookie(req, res);
       return res.status(401).json({ error: 'Invalid session' });
     }
-  } catch (err) {
+  } catch {
     clearSessionCookie(req, res);
     return res.status(401).json({ error: 'Invalid session' });
   }

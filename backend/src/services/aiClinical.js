@@ -226,7 +226,7 @@ async function getaiHistoryUserId(req,res,next){
                         [userId]
                     );
                  const history = rows.map(row => {
-                   let s = {}; let a = {};
+                   let s; let a;
                    try { s = JSON.parse(row.sleep_suggestion); } catch { s = { message: row.sleep_suggestion }; }
                    try { a = JSON.parse(row.activity_suggestion); } catch { a = { message: row.activity_suggestion }; }
                    return [

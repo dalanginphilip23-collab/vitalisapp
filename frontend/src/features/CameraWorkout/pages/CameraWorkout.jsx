@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Webcam from 'react-webcam';
 import { BottomNav, SidebarAnalytics, Topbar } from '../../../components/index.js';
 import Icon from '../../../components/Icon.jsx';
 import { useAuth } from '../../../hooks/useAuth.jsx';
 import { WORKOUT_OPTIONS } from '../constants/workout.js';
-import { resolveWorkout, BRYL_CREDIT } from '../constants/workoutGuide.js';
+import { resolveWorkout, resolveExerciseName } from '../constants/workoutGuide.js';
 import { useRepCounter, speak } from '../hooks/useRepCounter.js';
 import { useHoldTimer } from '../hooks/useHoldTimer.js';
 import { useAICoach } from "../hooks/useAiCoach.js";
@@ -23,7 +23,6 @@ import RightPanel from '../components/RightPanel.jsx';
 import RepProgressRing, { FormStatusPill } from '../components/RepProgressRing.jsx';
 import { formStatus } from '../components/formStatus.js';
 import CorrectionBanner from '../components/CorrectionBanner.jsx';
-import SessionBottomBar from '../components/SessionBottomBar.jsx';
 import WorkoutSummary from '../components/WorkoutSummary.jsx';
 import EarlyExitDialog from '../components/EarlyExitDialog.jsx';
 import WorkoutChooser from '../components/WorkoutChooser.jsx';
@@ -48,14 +47,39 @@ const CameraWorkout = () => {
   const minReps      = MIN_REPS_DEFAULT;
   const minHoldSecs  = 30;
 
+  // Plan-day queue: the day's exercise names resolved to countable workouts.
+  // Unresolvable rows (e.g. stretches) are skipped — the tracker still lists them.
+  const planQueue = useMemo(() => {
+    const list = fromPlan?.exercises;
+    if (!Array.isArray(list) || list.length === 0) return [];
+    return list.map((ex) => {
+      const id = resolveExerciseName(ex?.name);
+      if (!id) return null;
+      const r = resolveWorkout(id);
+      if (!r) return null;
+      const reps = parseInt(String(ex?.reps ?? ''), 10);
+      const holdSecs = Number(ex?.durationSeconds) || null;
+      return {
+        id,
+        label: r.label,
+        mode: r.mode,
+        sets: ex?.sets ?? null,
+        repTarget: r.mode === 'hold' ? null : (Number.isFinite(reps) && reps > 0 ? reps : 10),
+        holdTarget: r.mode === 'hold' ? (holdSecs && holdSecs > 0 ? Math.round(holdSecs) : 45) : null,
+      };
+    }).filter(Boolean);
+  }, [fromPlan]);
+
   const [workoutType, setWorkoutType] = useState(() => {
-    // Deep links: Bryl slugs ('push-up') or legacy ids ('pushup') both resolve.
-    // Otherwise null -> user picks a workout first, camera opens after.
+    // Deep links: guide slugs ('push-up') or legacy ids ('pushup') both resolve.
+    // Plan days auto-select the first queued workout. Otherwise null ->
+    // user picks a workout first, camera opens after.
     if (location.state?.exerciseId) {
       if (resolveWorkout(location.state.exerciseId)) return location.state.exerciseId;
       const match = WORKOUT_OPTIONS.find(o => o.id === location.state.exerciseId);
       if (match) return match.id;
     }
+    if (planQueue.length > 0) return planQueue[0].id;
     if (fromPlan?.activityType) {
       const bySlug = resolveWorkout(fromPlan.activityType.toLowerCase().replace(/\s+/g, '-'));
       if (bySlug) return bySlug.id;
@@ -74,11 +98,16 @@ const CameraWorkout = () => {
   const workoutMode = resolved?.mode ?? 'rep';
   const counterType = resolved?.counterType ?? 'generic';
 
-  // Rep + hold targets (user picks before Start). Manual input allowed.
-  const [repTarget, setRepTarget] = useState(5);
+  // Rep + hold targets (user picks before Start, or seeded from the plan queue).
+  // Manual input always allowed — editing overrides the current queue item.
+  const [repTarget, setRepTarget] = useState(() => planQueue[0]?.repTarget ?? 5);
   const [repCustom, setRepCustom] = useState('');
-  const [holdTarget, setHoldTarget] = useState(45);
+  const [holdTarget, setHoldTarget] = useState(() => planQueue[0]?.holdTarget ?? 45);
   const [holdCustom, setHoldCustom] = useState('');
+
+  // Queue position. Manual exercise picks exit queue mode (user takes over).
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [queueActive, setQueueActive] = useState(planQueue.length > 0);
 
   const [isRecording,     setIsRecording]     = useState(false);
   const [paused,          setPaused]          = useState(false);
@@ -126,8 +155,16 @@ const CameraWorkout = () => {
   const WARN_COOLDOWN_MS = 4000;
   // Target-reached fires the stop sequence once — without this the rep/hold
   // branch re-triggers every frame until the 800ms stop lands (double logs,
-  // double notifications, double navigations).
+  // double navigations).
   const reachedRef = useRef(false);
+  // Queue mirrors (advance runs from a pose-callback timeout — refs stay fresh).
+  const queueIndexRef  = useRef(0);
+  const queueActiveRef = useRef(planQueue.length > 0);
+  const planQueueRef   = useRef(planQueue);
+  const completedRef   = useRef(0);
+  const advanceRef     = useRef(null);
+
+  useEffect(() => { planQueueRef.current = planQueue; }, [planQueue]);
 
   const { repCount, repCountRef, countRep, resetReps }           = useRepCounter({ voiceEnabled });
   const { holdSecs, holdRef, updateHold, resetHold, setHoldTarget: setHoldGoal } = useHoldTimer({ voiceEnabled });
@@ -195,14 +232,25 @@ const CameraWorkout = () => {
     const final = repCountRef.current;
     const held = Math.floor(holdRef.current);
     const label = resolved?.label ?? workoutType;
-    const msg = workoutMode === 'hold'
-      ? `Session complete! You held ${held} seconds. Great work!`
-      : `Session complete! You did ${final} ${final === 1 ? 'rep' : 'reps'}. Great work!`;
+    // Plan-day queue: the summary covers the whole day, not just the last item.
+    const queue = planQueueRef.current;
+    const inQueue = queueActiveRef.current && queue.length > 0;
+    // The current item only counts when it has any reps/hold behind it —
+    // ending instantly on exercise 1 must read 0 done, not 1.
+    const currentCounts = (workoutMode === 'hold' ? held : final) > 0;
+    const queueDone = inQueue ? completedRef.current + (currentCounts ? 1 : 0) : 0;
+    const msg = inQueue
+      ? (queueDone >= queue.length
+        ? `Day ${fromPlan.dayNumber} complete! All ${queue.length} exercises done. Great work!`
+        : `Day ${fromPlan.dayNumber} stopped — ${queueDone} of ${queue.length} exercises done.`)
+      : workoutMode === 'hold'
+        ? `Session complete! You held ${held} seconds. Great work!`
+        : `Session complete! You did ${final} ${final === 1 ? 'rep' : 'reps'}. Great work!`;
     setAiFeedback(msg);
     if (voiceEnabled) speak(msg, 1.0, 1.05);
 
     setLogs(prev => [...prev, {
-      exercise: label,
+      exercise: inQueue ? `Day ${fromPlan.dayNumber} — ${label}` : label,
       reps:     workoutMode === 'hold' ? `${held}s` : final,
       time:     new Date().toLocaleTimeString(),
     }]);
@@ -233,13 +281,15 @@ const CameraWorkout = () => {
     const scoreParts = [avgSym, avgSym];
     if (tempoNum !== null) scoreParts.push(tempoNum);
     const score = Math.max(0, Math.min(100, Math.round(scoreParts.reduce((a, b) => a + b, 0) / scoreParts.length)));
-    const lastCue = aiFeedback && !/^(Select Exercise|Starting|Switched|Session complete)/.test(aiFeedback)
+    const lastCue = aiFeedback && !/^(Select Exercise|Starting|Switched|Session complete|Exercise \d|Skipped)/.test(aiFeedback)
       ? aiFeedback
       : 'Nice work — consistency beats intensity. Keep it up.';
     if (!skipSummaryRef.current) {
       setSummary({
-      exercise: label,
-      achieved: workoutMode === 'hold' ? `${held}s / ${holdTarget}s held` : `${final} / ${repTarget} reps`,
+      exercise: inQueue ? `Day ${fromPlan.dayNumber}: ${fromPlan.dayTitle}` : label,
+      achieved: inQueue
+        ? `${queueDone} / ${queue.length} exercises`
+        : workoutMode === 'hold' ? `${held}s / ${holdTarget}s held` : `${final} / ${repTarget} reps`,
       score,
       rows: [
         { label: 'Alignment', icon: 'accessibility_new', good: alignGood, state: avgSym > 0 ? (alignGood ? 'Good' : 'Needs work') : '—' },
@@ -296,6 +346,63 @@ const CameraWorkout = () => {
     });
   }, [isRecording, voiceEnabled, setAiFeedback]);
 
+  // ── Plan-day queue: swap the session to a queue item (targets + counters
+  // reset, recording + timer keep running so the day stays one session) ──
+  const applyQueueItem = useCallback((item) => {
+    if (!item) return;
+    setWorkoutType(item.id);
+    setRepTarget(item.repTarget ?? 5);
+    setRepCustom('');
+    setHoldTarget(item.holdTarget ?? 45);
+    setHoldCustom('');
+    setHoldGoal(item.holdTarget ?? 45);
+    resetReps();
+    resetHold();
+    reachedRef.current = false;
+  }, [resetReps, resetHold, setHoldGoal]);
+
+  // Advance after a target is hit (or skipped): log the finished item, move
+  // to the next, or finish the day when the queue is exhausted.
+  const advanceToNext = useCallback((skipped = false) => {
+    const queue = planQueueRef.current;
+    const idx = queueIndexRef.current;
+    const current = queue[idx];
+    if (!current) { doStopRef.current?.(); return; }
+    if (!skipped) {
+      const done = repCountRef.current;
+      const held = Math.floor(holdRef.current);
+      setLogs(prev => [...prev, {
+        exercise: current.label,
+        reps:     current.mode === 'hold' ? `${held}s` : done,
+        time:     new Date().toLocaleTimeString(),
+      }]);
+      completedRef.current += 1;
+    }
+    const next = queue[idx + 1];
+    if (!next) { doStopRef.current?.(); return; }
+    queueIndexRef.current = idx + 1;
+    setQueueIndex(idx + 1);
+    applyQueueItem(next);
+    const target = next.mode === 'hold' ? `Hold for ${next.holdTarget} seconds` : `Target ${next.repTarget} reps`;
+    const sets = next.sets ? ` (${next.sets} sets)` : '';
+    const msg = skipped
+      ? `Skipped. Next up ${idx + 2} of ${queue.length}: ${next.label}. ${target}${sets}.`
+      : `Exercise ${idx + 2} of ${queue.length}: ${next.label}. ${target}${sets}.`;
+    setAiFeedback(msg);
+    if (voiceEnabled) speak(msg, 0.95, 1.0);
+  }, [applyQueueItem, voiceEnabled, setAiFeedback, repCountRef, holdRef]);
+
+  useEffect(() => { advanceRef.current = advanceToNext; }, [advanceToNext]);
+
+  // Banner Skip: jump past the current queue item (not counted as done).
+  const handleQueueSkip = useCallback(() => {
+    if (!queueActiveRef.current) return;
+    if (queueIndexRef.current >= planQueueRef.current.length - 1) return;
+    // Freeze counting until the next item is applied (it resets this flag).
+    reachedRef.current = true;
+    advanceRef.current?.(true);
+  }, []);
+
   // Summary Done: dismiss, then flush any deferred plan navigation.
   const handleSummaryDone = useCallback(() => {
     setSummary(null);
@@ -327,9 +434,24 @@ const CameraWorkout = () => {
       const label = resolved?.label ?? workoutType;
       const cue = resolved?.cue ?? '';
       const goal = workoutMode === 'hold' ? `Hold for ${holdTarget} seconds.` : `Target ${repTarget} reps.`;
-      const msg = fromPlan
-        ? `Starting Day ${fromPlan.dayNumber}: ${fromPlan.dayTitle}. ${cue} ${goal}`
-        : `Starting ${label}. ${cue} ${goal}`;
+      // Fresh Start always restarts the plan queue from exercise 1.
+      let msg;
+      if (fromPlan && queueActiveRef.current && planQueueRef.current.length > 0) {
+        queueIndexRef.current = 0;
+        setQueueIndex(0);
+        completedRef.current = 0;
+        const first = planQueueRef.current[0];
+        applyQueueItem(first);
+        const target = first.mode === 'hold' ? `Hold for ${first.holdTarget} seconds.` : `Target ${first.repTarget} reps.`;
+        const sets = first.sets ? ` (${first.sets} sets)` : '';
+        msg = planQueueRef.current.length > 1
+          ? `Starting Day ${fromPlan.dayNumber}: ${fromPlan.dayTitle}. Exercise 1 of ${planQueueRef.current.length}: ${first.label}. ${target}${sets}`
+          : `Starting Day ${fromPlan.dayNumber}: ${fromPlan.dayTitle}. ${first.label}. ${target}${sets}`;
+      } else {
+        msg = fromPlan
+          ? `Starting Day ${fromPlan.dayNumber}: ${fromPlan.dayTitle}. ${cue} ${goal}`
+          : `Starting ${label}. ${cue} ${goal}`;
+      }
 
       setAiFeedback(msg);
       if (voiceEnabled) speak(msg, 0.95, 1.0);
@@ -424,7 +546,10 @@ const CameraWorkout = () => {
             const msg = `Target reached! ${holdTarget} seconds held.`;
             setAiFeedback(msg);
             if (voiceEnabled) speak(msg, 1.0, 1.05);
-            setTimeout(() => doStopRef.current?.(), 800);
+            setTimeout(() => {
+              if (queueActiveRef.current && queueIndexRef.current < planQueueRef.current.length - 1) advanceRef.current?.();
+              else doStopRef.current?.();
+            }, 800);
           }
         } else {
           const before = repCountRef.current;
@@ -435,7 +560,10 @@ const CameraWorkout = () => {
             const msg = `Target reached! ${repTarget} reps.`;
             setAiFeedback(msg);
             if (voiceEnabled) speak(msg, 1.0, 1.05);
-            setTimeout(() => doStopRef.current?.(), 800);
+            setTimeout(() => {
+              if (queueActiveRef.current && queueIndexRef.current < planQueueRef.current.length - 1) advanceRef.current?.();
+              else doStopRef.current?.();
+            }, 800);
           }
         }
       }
@@ -482,6 +610,9 @@ const CameraWorkout = () => {
   const handleWorkoutChange = (opt) => {
     const id = opt?.id ?? opt;
     if (!id) return;
+    // Manual pick takes over — the plan queue stops auto-advancing.
+    queueActiveRef.current = false;
+    setQueueActive(false);
     // State first so selection always sticks, even if feedback fails.
     setWorkoutType(id);
     try {
@@ -539,7 +670,20 @@ const CameraWorkout = () => {
                 · Day {fromPlan.dayNumber}: {fromPlan.dayTitle}
               </span>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              {queueActive && planQueue.length > 1 && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--accent)] whitespace-nowrap">
+                  Exercise {Math.min(queueIndex + 1, planQueue.length)}/{planQueue.length}
+                </span>
+              )}
+              {queueActive && isRecording && queueIndex < planQueue.length - 1 && (
+                <button
+                  onClick={handleQueueSkip}
+                  className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 min-h-[32px] rounded-full border border-[var(--accent-border)] text-[var(--accent)] active:scale-95 transition-transform"
+                >
+                  Skip
+                </button>
+              )}
               {isRecording && (
                 <span className="text-[10px] font-black tabular-nums text-[var(--accent)]">
                   {formatTime(elapsedSecs)}
@@ -557,7 +701,7 @@ const CameraWorkout = () => {
         {chosen && (
           <SessionHeader
             workoutLabel={resolved?.label ?? workoutType}
-            workoutSub={`${resolved?.muscle ?? 'Full body'} · ${workoutMode === 'hold' ? `${holdTarget}s hold` : `${repTarget} reps`}`}
+            workoutSub={`${queueActive && planQueue.length > 1 ? `Exercise ${Math.min(queueIndex + 1, planQueue.length)}/${planQueue.length} · ` : ''}${resolved?.muscle ?? 'Full body'} · ${workoutMode === 'hold' ? `${holdTarget}s hold` : `${repTarget} reps`}`}
             isRecording={isRecording}
             paused={paused}
             cameraOn={cameraOn}
@@ -607,6 +751,8 @@ const CameraWorkout = () => {
               landmarksRef={landmarksRef}
               elapsedLabel={formatTime(elapsedSecs)}
               onStartStop={handleStartStop}
+              onPauseToggle={handlePauseToggle}
+              paused={paused}
               tracking={tracking}
               hideRepCount
             />
@@ -702,29 +848,17 @@ const CameraWorkout = () => {
           </div>
         </div>
 
+        {/* Controls now live inside the camera feed (in-feed bar) so the
+            fixed BottomNav can never cover them — no sticky bar needed. */}
         <main className="p-4 sm:p-4 md:p-8 md:pt-4 pb-28 md:pb-8 max-w-7xl 2xl:max-w-[1400px] mx-auto w-full">
           <div className="flex flex-col gap-4 sm:gap-6">
             <RightPanel logs={logs} />
           </div>
         </main>
-        <div className="sticky bottom-[76px] md:static z-30 px-4 sm:px-4 md:px-8 max-w-7xl 2xl:max-w-[1400px] mx-auto w-full pb-2 md:pb-0">
-          <div className="glass-card border border-[var(--border-light)] rounded-3xl p-3 shadow-lg md:shadow-none md:bg-none md:border-0 md:p-0 md:rounded-none md:shadow-none">
-            <SessionBottomBar
-              isRecording={isRecording}
-              paused={paused}
-              cameraOn={cameraOn}
-              onPauseToggle={handlePauseToggle}
-              onStartStop={handleStartStop}
-            />
-          </div>
-        </div>
-        <div className="h-2 md:hidden" />
         <WorkoutSummary summary={summary} onDone={handleSummaryDone} />
         </>
         )}
         </div>
-
-        <BottomNav />
       </div>
 
       <style>{`
@@ -737,6 +871,8 @@ const CameraWorkout = () => {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       </div>
+      {/* Fixed outside the scroll column so it can never be trapped or covered */}
+      <BottomNav />
     </div>
   );
 };

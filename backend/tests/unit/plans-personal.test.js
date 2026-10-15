@@ -10,7 +10,7 @@ const dbPath = require.resolve('../../src/config/db');
 let queue = [];
 let executed = [];
 const fakeDb = {
-  execute: async (sql, params) => {
+  execute: async (sql, _params) => {
     executed.push(String(sql).slice(0, 80));
     const next = queue.shift();
     if (next instanceof Error) throw next;
@@ -172,6 +172,63 @@ describe('auto-from-goal', () => {
     assert.equal(plans.humanizeGoal('LOSE_WEIGHT'), 'Lose Weight');
     assert.equal(plans.tagForGoal('LOSE_WEIGHT'), 'Fat Loss');
     assert.equal(plans.tagForGoal('BUILD_MUSCLE'), 'Strength');
+  });
+  it('accepts goalType + explicit exercises on create', () => {
+    const r = plans.createPersonalSchema.safeParse({
+      title: 'My Bulk',
+      goalType: 'BUILD_MUSCLE',
+      exercises: [{ name: 'Dumbbell Bench Press', sets: 4, reps: '8' }],
+    });
+    assert.ok(r.success);
+    assert.equal(r.data.goalType, 'BUILD_MUSCLE');
+    assert.equal(r.data.exercises.length, 1);
+    assert.equal(r.data.exercises[0].restSeconds, 45);
+  });
+  it('rejects unknown goalType and oversized exercise lists', () => {
+    assert.ok(!plans.createPersonalSchema.safeParse({ title: 'x', goalType: 'NOPE' }).success);
+    const many = Array.from({ length: 25 }, (_, i) => ({ name: `Ex ${i}` }));
+    assert.ok(!plans.createPersonalSchema.safeParse({ title: 'x', exercises: many }).success);
+  });
+  it('matches starter exercises to training goal', () => {
+    const muscle = plans.starterForGoal('BUILD_MUSCLE').map((e) => e.exercise_name);
+    const gain = plans.starterForGoal('GAIN_WEIGHT').map((e) => e.exercise_name);
+    const loss = plans.starterForGoal('LOSE_WEIGHT').map((e) => e.exercise_name);
+    const cardio = plans.starterForTag('Cardio').map((e) => e.exercise_name);
+    assert.ok(muscle.includes('Dumbbell Bench Press'));
+    assert.deepEqual(gain, muscle);
+    assert.deepEqual(loss, cardio);
+    assert.equal(plans.starterForGoal('NOPE'), null);
+  });
+  it('prefers explicit exercises, then goal, then tag', () => {
+    const custom = plans.dayExercisesFor({
+      tag: 'Cardio', goalType: 'BUILD_MUSCLE',
+      exercises: [{ name: 'Squat', sets: 5, reps: '5', restSeconds: 120 }],
+    });
+    assert.equal(custom.length, 1);
+    assert.equal(custom[0].exercise_name, 'Squat');
+    assert.equal(custom[0].sets, 5);
+    const goalBased = plans.dayExercisesFor({ tag: 'Cardio', goalType: 'BUILD_MUSCLE' });
+    assert.ok(goalBased.some((e) => e.exercise_name === 'Dumbbell Bench Press'));
+    const tagBased = plans.dayExercisesFor({ tag: 'Cardio' });
+    assert.ok(tagBased.some((e) => e.exercise_name === 'Jumping Jacks'));
+  });
+  it('creates plan with explicit goal exercises on workout days', async () => {
+    queue = [[], { insertId: 100 }];
+    for (let n = 1; n <= 7; n += 1) {
+      queue.push({ insertId: 300 + n });
+      if (n % 3 !== 0) queue.push({ insertId: 0 }, { insertId: 0 });
+    }
+    queue.push([]);
+    const res = mockRes();
+    await plans.postCreate(
+      { user: { id: 13 }, body: { title: 'My Bulk', tag: 'Strength', intensity: 'High', targetFocus: 'Strength', durationDays: 7, description: '', goalType: 'BUILD_MUSCLE', exercises: [{ name: 'Squat', sets: 5, reps: '5' }, { name: 'Bench', sets: 4, reps: '8' }] } },
+      res,
+      throwNext
+    );
+    assert.equal(res.statusCode, 201);
+    const exInserts = executed.filter((s) => s.includes('plan_exercises'));
+    // 5 workout days × 2 explicit exercises (not the 4 generic starters)
+    assert.equal(exInserts.length, 10);
   });
   it('matches starter exercises to plan focus', () => {
     const strength = plans.starterForTag('Strength').map((e) => e.exercise_name);
