@@ -82,9 +82,9 @@
   --tracking-wide: 0.08em;
   --tracking-widest: 0.12em;
   --z-nav: 40;
-  --z-topbar: 60;
-  --z-modal: 100;
-  --z-toast: 110;
+  --z-topbar: 50;
+  --z-modal: 5000;
+  --z-toast: 6000;
   --ease-default: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --duration-fast: 150ms;
@@ -165,9 +165,9 @@
   --tracking-wide: 0.08em;
   --tracking-widest: 0.12em;
   --z-nav: 40;
-  --z-topbar: 60;
-  --z-modal: 100;
-  --z-toast: 110;
+  --z-topbar: 50;
+  --z-modal: 5000;
+  --z-toast: 6000;
   --ease-default: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --duration-fast: 150ms;
@@ -808,4 +808,149 @@ button.btn-is-busy,
 button[data-loading='true'] {
   position: relative;
   cursor: wait;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Universal responsive system — any device 320px → 4K
+   Mobile-first: base = small phone, scale up with min-width.
+   Covers: phones (320/360/390/430), tablets (768/834/1024),
+   laptops (1280/1440), desktops (1536), ultrawide/4K (1920+).
+   ══════════════════════════════════════════════════════════════ */
+
+/* Fluid type: headings scale with viewport, body stays readable */
+:root {
+  --fluid-h1: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+  --fluid-h2: clamp(1.125rem, 1rem + 0.6vw, 1.5rem);
+  --fluid-body: clamp(0.875rem, 0.85rem + 0.15vw, 1rem);
+  --container-pad: clamp(12px, 3vw, 24px);
+  --container-max: 1120px;
+}
+
+/* dvh-first viewport height (iOS Safari toolbar-safe), vh fallback */
+.min-h-screen,
+.min-h-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.max-h-screen {
+  max-height: 100vh;
+  max-height: 100dvh;
+}
+
+/* Safe-area aware page gutters (notch / gesture bar / Dynamic Island) */
+.pt-safe {
+  padding-top: max(0px, env(safe-area-inset-top, 0px));
+}
+.pb-safe {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
+.px-safe {
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+}
+
+/* Centered app container: caps line-length on 4K, full-bleed on phones */
+.app-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-pad);
+}
+@media (min-width: 1536px) {
+  :root {
+    --container-max: 1280px;
+  }
+}
+@media (min-width: 1920px) {
+  :root {
+    --container-max: 1400px;
+  }
+}
+
+/* Auto-fit grids: N columns on desktop, collapse gracefully to 1-2 on phones */
+.responsive-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+.responsive-grid-sm {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+/* Media never overflows narrow viewports; camera/maps keep aspect */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+video,
+.camera-frame {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+}
+@media (min-width: 768px) {
+  video.camera-frame {
+    aspect-ratio: 16 / 10;
+  }
+}
+/* Landscape phones: camera gets shorter so controls stay visible */
+@media (max-height: 500px) and (orientation: landscape) {
+  video,
+  .camera-frame {
+    aspect-ratio: 16 / 9;
+    max-height: 62vh;
+    max-height: 62dvh;
+  }
+  .leaflet-container {
+    min-height: 220px !important;
+  }
+}
+
+/* Ultra-small phones (≤360px): tighten paddings, shrink fixed rings/text */
+@media (max-width: 360px) {
+  :root {
+    --container-pad: 10px;
+  }
+  .glass-panel,
+  .glass-card {
+    border-radius: 14px;
+  }
+  /* Prevent iOS horizontal nudge from long words/numbers */
+  body {
+    font-size: 14px;
+  }
+}
+
+/* Tablets portrait: two-column app grids become comfortable */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --container-pad: 20px;
+  }
+}
+
+/* Large desktop / 4K: keep cards from stretching edge-to-edge */
+@media (min-width: 1920px) {
+  body {
+    font-size: 15px;
+  }
+}
+
+/* Foldables / split-screen narrow windows: single column fallback */
+@media (max-width: 480px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Touch: keep 44px targets on coarse pointers, allow denser desktop */
+@media (pointer: fine) {
+  :root {
+    --touch-target: 36px;
+  }
 }

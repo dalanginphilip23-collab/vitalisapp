@@ -31,16 +31,16 @@ const WorkoutHistory = () => {
         Workout History <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent-bg)] text-[var(--accent)] tabular-nums">{logs.length}</span>
       </p>
       {logs.map(log => (
-        <div key={log.id} className="flex items-center justify-between rounded-xl p-3 border border-[var(--border-light)] glass-card">
-          <div>
-            <p className="text-sm font-bold capitalize text-[var(--text-primary)]">{String(log.workout_type || '').replace(/_/g, ' ')}</p>
+        <div key={log.id} className="flex items-center justify-between gap-2 rounded-xl p-3 border border-[var(--border-light)] glass-card">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold capitalize text-[var(--text-primary)] truncate">{String(log.workout_type || '').replace(/_/g, ' ')}</p>
             <p className="text-[11px] text-[var(--text-muted)]">
               {log.start_time ? new Date(log.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
               {log.duration_seconds ? ` · ${Math.round(log.duration_seconds / 60)} min` : ''}
               {' · '}{log.status}
             </p>
           </div>
-          <span className="text-sm font-black text-[var(--accent)]">{log.rep_count ?? 0} reps</span>
+          <span className="text-sm font-black text-[var(--accent)] shrink-0 whitespace-nowrap tabular-nums">{log.rep_count ?? 0} reps</span>
         </div>
       ))}
     </div>

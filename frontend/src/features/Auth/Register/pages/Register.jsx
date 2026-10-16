@@ -50,7 +50,7 @@ const Field = ({ id, label, icon, error, rightElement, focusedId, setFocusedId, 
           onFocus={() => setFocusedId(id)}
           onBlur={() => setFocusedId('')}
           aria-invalid={error ? true : undefined}
-          className={`w-full bg-white/5 border rounded-xl text-sm text-[#e5e2e1] p-3.5 outline-none transition-all placeholder:text-white/10 disabled:opacity-50 ${icon ? 'pl-11' : 'pl-4'} ${rightElement ? 'pr-12' : 'pr-4'} ${error ? 'border-red-500/60' : 'border-white/10 focus:border-[var(--accent)]/50 focus:bg-[var(--accent)]/5 focus:ring-4 focus:ring-[var(--accent)]/10'}`}
+          className={`w-full bg-white/5 border rounded-xl text-[16px] sm:text-sm text-[#e5e2e1] p-3.5 outline-none transition-all placeholder:text-white/10 disabled:opacity-50 ${icon ? 'pl-11' : 'pl-4'} ${rightElement ? 'pr-12' : 'pr-4'} ${error ? 'border-red-500/60' : 'border-white/10 focus:border-[var(--accent)]/50 focus:bg-[var(--accent)]/5 focus:ring-4 focus:ring-[var(--accent)]/10'}`}
           {...props}
         />
         {rightElement && (
@@ -118,7 +118,7 @@ const Register = () => {
 
         {/* ── Right glass card ── */}
         <div className="flex items-center justify-center p-5 sm:p-[40px_32px] max-[960px]:p-[20px]">
-          <div className="relative w-full max-w-[420px] bg-[#121210]/65 backdrop-blur-[32px] saturate-[140%] border border-[var(--accent)]/10 rounded-[20px] p-6 sm:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)] overflow-hidden">
+          <div className="relative w-full max-w-[420px] bg-[#121210]/65 backdrop-blur-[32px] saturate-[140%] border border-[var(--accent)]/10 rounded-[20px] p-5 sm:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)] overflow-hidden">
 
             {/* Logo */}
             <div className="flex items-center gap-2.5 mb-7">
@@ -241,14 +241,14 @@ const Register = () => {
                   disabled={loading}
                   checked={formData.agreed}
                   onChange={(e) => { if (error) clearError(); setFormData({ ...formData, agreed: e.target.checked }); }}
-                  className="mt-0.5 w-4 h-4 min-w-[16px] min-h-[16px] shrink-0 accent-[var(--accent)] cursor-pointer"
+                  className="mt-0 w-5 h-5 min-w-[20px] min-h-[20px] shrink-0 accent-[var(--accent)] cursor-pointer"
                 />
                 <label htmlFor="register-agree" className="cursor-pointer">
                   I agree to the{' '}
                   <button
                     type="button"
                     onClick={() => setLegalView('terms')}
-                    className="text-[var(--accent)] font-semibold underline decoration-[var(--accent)]/50 underline-offset-2 hover:brightness-110 transition-colors"
+                    className="text-[var(--accent)] font-semibold underline decoration-[var(--accent)]/50 underline-offset-2 hover:brightness-110 transition-colors py-1"
                   >
                     Terms of Use
                   </button>
@@ -256,7 +256,7 @@ const Register = () => {
                   <button
                     type="button"
                     onClick={() => setLegalView('privacy')}
-                    className="text-[var(--accent)] font-semibold underline decoration-[var(--accent)]/50 underline-offset-2 hover:brightness-110 transition-colors"
+                    className="text-[var(--accent)] font-semibold underline decoration-[var(--accent)]/50 underline-offset-2 hover:brightness-110 transition-colors py-1"
                   >
                     Privacy Policy
                   </button>

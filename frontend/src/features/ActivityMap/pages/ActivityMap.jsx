@@ -98,11 +98,11 @@ const ActivityMap = () => {
   const tileAttribution = isDark ? TILE_ATTRIBUTION_DARK : TILE_ATTRIBUTION_LIGHT;
   const routeColor = ROUTE_GREEN;
 
-  const { userLocation, startCoords, locationStatus, mapCenter, path, setPath } =
+  const { userLocation, startCoords, locationStatus, gpsLive, mapCenter, path, setPath, fixesRef, resetFixes } =
     useGeolocation(isRecordingState);
 
   const { metrics, splits, resetMetrics } =
-    useRunTimer(isRecordingState, locationStatus, path);
+    useRunTimer(isRecordingState, locationStatus, path, fixesRef);
 
   const {
     isRecording:      rc_isRecording,
@@ -115,7 +115,7 @@ const ActivityMap = () => {
     handlePauseResume: rc_handlePauseResume,
     handleFinish:     rc_handleFinish,
     handleDiscard:    rc_handleDiscard,
-  } = useRunControls({ userLocation, startCoords, metrics, path, splits, resetMetrics, setPath });
+  } = useRunControls({ userLocation, startCoords, metrics, path, splits, resetMetrics, setPath, resetFixes });
 
   // GPS-gated start: recording without location would fabricate distance,
   // so we refuse to start and explain why instead of simulating movement.
@@ -258,7 +258,7 @@ const ActivityMap = () => {
       <SidebarAnalytics onExpandChange={setSidebarExpanded} />
 
       {/* Right column: topbar + content */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden pt-14 sm:pt-15">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden pt-14 sm:pt-15 md:ml-[72px]">
 
         <Topbar sidebarExpanded={sidebarExpanded} userId={USER_ID} />
 
@@ -374,7 +374,7 @@ const ActivityMap = () => {
                   />
                 </MapContainer>
 
-                <GpsBadge locationStatus={locationStatus} />
+                <GpsBadge locationStatus={locationStatus} gpsLive={gpsLive} />
 
                 {isLargeScreen ? (
                   <RunControls

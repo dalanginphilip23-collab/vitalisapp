@@ -45,7 +45,7 @@ export default function Button({
       if (mounted.current) setAutoBusy(false);
     }
   }, [onClick, busy]);
-  const base = 'inline-flex items-center justify-center font-bold rounded-xl transition-all border disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-card)]';
+  const base = 'inline-flex items-center justify-center font-bold rounded-xl transition-all border disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-card)] min-h-[44px]';
   const variants = {
     primary: 'bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] border-transparent hover:bg-[var(--accent-solid-hover)] shadow-[0_2px_12px_var(--accent-bg)]',
     ghost: 'bg-transparent text-[var(--text-primary)] border-[var(--border-light)] hover:bg-[var(--bg-hover)]',
@@ -77,7 +77,7 @@ export default function Button({
         <span className="btn-spinner w-3.5 h-3.5 rounded-full border-2 border-transparent border-t-current animate-spin shrink-0" aria-hidden="true" />
       )}
       {!busy && icon && iconPosition === 'left' && <Icon name={icon} className="text-[16px] shrink-0" />}
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 text-center break-words">{children}</span>
       {!busy && icon && iconPosition === 'right' && <Icon name={icon} className="text-[16px] shrink-0" />}
     </button>
   );

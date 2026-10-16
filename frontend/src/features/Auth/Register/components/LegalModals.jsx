@@ -23,7 +23,7 @@ export function TermsOfUseModal({ isOpen, onClose }) {
       footer={
         <button
           onClick={onClose}
-          className="w-full bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] font-bold text-[11px] tracking-[0.25em] uppercase py-3 rounded-[10px] hover:brightness-110 transition-all"
+          className="w-full bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] font-bold text-[11px] tracking-[0.25em] uppercase py-3.5 min-h-[44px] rounded-[10px] hover:brightness-110 transition-all"
         >
           I Understand
         </button>
@@ -73,7 +73,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }) {
       footer={
         <button
           onClick={onClose}
-          className="w-full bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] font-bold text-[11px] tracking-[0.25em] uppercase py-3 rounded-[10px] hover:brightness-110 transition-all"
+          className="w-full bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] font-bold text-[11px] tracking-[0.25em] uppercase py-3.5 min-h-[44px] rounded-[10px] hover:brightness-110 transition-all"
         >
           I Understand
         </button>

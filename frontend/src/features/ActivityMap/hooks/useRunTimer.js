@@ -1,18 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import {
+  haversineDistanceM,
+  acceptSegment,
+  acceptLegacySegment,
+  settleDecision,
+  MAX_SETTLE_SKIPS,
+} from '../lib/runMath.js';
 
-// ─── Haversine distance (meters) between two [lat, lng] points ───────────────
-const haversineDistance = ([lat1, lon1], [lat2, lon2]) => {
-  const R = 6371000; // Earth radius in meters
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-};
-
-export const useRunTimer = (isRecording, locationStatus, path) => {
+export const useRunTimer = (isRecording, locationStatus, path, fixesRef) => {
   const [metrics, setMetrics] = useState({
     time: 0,
     distance: 0,
@@ -30,20 +25,36 @@ export const useRunTimer = (isRecording, locationStatus, path) => {
   // The old code only measured the single newest segment per 1s tick, so
   // every extra GPS fix between ticks was silently dropped (under-count).
   const processedIdxRef = useRef(1);
-  // After (re)start the first segment is the GPS settle/teleport jump
-  // (stale pre-start fix → first live fix, or pre-pause → post-pause) —
-  // skip exactly one boundary segment.
-  const resumeSkipRef = useRef(false);
+  // Post-(re)start settle budget: skip segments until the receiver locks on
+  // (first fix with accuracy <= 15m), up to MAX_SETTLE_SKIPS. The old single
+  // boolean skipped exactly one leg, letting the settling tail leak distance.
+  const settleBudgetRef = useRef(0);
   const wasRecordingRef = useRef(false);
+  // Wall-clock anchor: background tabs throttle setInterval, so tick counting
+  // undercounts real elapsed time. Elapsed is derived from Date.now() minus
+  // accumulated pause time instead.
+  const startedAtRef = useRef(null);
+  const pausedMsRef = useRef(0);
+  const pauseBeganRef = useRef(null);
 
   // Keep prevPathRef in sync with latest path
   useEffect(() => {
     prevPathRef.current = path;
   }, [path]);
 
-  // Arm the one-segment boundary skip whenever recording (re)starts
+  // Arm the settle-skip budget + wall-clock anchor on (re)start; freeze the
+  // clock on pause so background time never bills.
   useEffect(() => {
-    if (isRecording && !wasRecordingRef.current) resumeSkipRef.current = true;
+    if (isRecording && !wasRecordingRef.current) {
+      settleBudgetRef.current = MAX_SETTLE_SKIPS;
+      if (pauseBeganRef.current != null) {
+        pausedMsRef.current += Date.now() - pauseBeganRef.current;
+        pauseBeganRef.current = null;
+      }
+    }
+    if (!isRecording && wasRecordingRef.current) {
+      pauseBeganRef.current = Date.now();
+    }
     wasRecordingRef.current = isRecording;
   }, [isRecording]);
 
@@ -51,7 +62,11 @@ export const useRunTimer = (isRecording, locationStatus, path) => {
     if (isRecording) {
       timerRef.current = setInterval(() => {
         setMetrics((prev) => {
-          const t = prev.time + 1;
+          const elapsed = startedAtRef.current == null
+            ? prev.time + 1
+            : Math.round((Date.now() - startedAtRef.current - pausedMsRef.current) / 1000);
+          // Never run backwards (pause/resume edge) — wall clock only moves on.
+          const t = Math.max(prev.time + (startedAtRef.current == null ? 1 : 0), elapsed);
 
           // ── Real GPS distance only ─────────────────────────────────────────
           // No simulated movement: when GPS is unavailable the timer keeps
@@ -62,20 +77,32 @@ export const useRunTimer = (isRecording, locationStatus, path) => {
           // newest one) — otherwise fast GPS update rates under-count.
           let d = prev.distance;
           const currentPath = prevPathRef.current;
+          const fixes = fixesRef?.current ?? [];
           if (locationStatus === 'granted' && currentPath.length >= 2) {
             if (currentPath.length < processedIdxRef.current) {
               processedIdxRef.current = Math.max(1, currentPath.length);
             }
-            let start = processedIdxRef.current;
-            if (resumeSkipRef.current && currentPath.length > start) {
-              start += 1; // skip the settle/teleport boundary segment
-              resumeSkipRef.current = false;
-            }
-            for (let i = Math.max(1, start); i < currentPath.length; i++) {
-              const deltaM = haversineDistance(currentPath[i - 1], currentPath[i]);
-              // Ignore GPS jitter (< 1m or > 50m per second are noise)
-              if (deltaM > 1 && deltaM < 50) {
-                d += deltaM / 1000; // convert to km
+            let start = Math.max(1, processedIdxRef.current);
+            for (let i = start; i < currentPath.length; i++) {
+              // Settle gate: ignore the post-(re)start tail until accuracy locks.
+              if (settleBudgetRef.current > 0) {
+                const r = settleDecision(fixes[i]?.acc, settleBudgetRef.current);
+                settleBudgetRef.current = r.budget;
+                if (r.skip) continue;
+              }
+              const deltaM = haversineDistanceM(currentPath[i - 1], currentPath[i]);
+              const a = fixes[i - 1];
+              const b = fixes[i];
+              if (a && b) {
+                const dtSec = (b.t - a.t) / 1000;
+                // Speed-gated: teleports fail on m/s, slow-but-real legs pass
+                // however long the fix interval was (up to the stale-gap cap).
+                if (acceptSegment({ deltaM, dtSec }).ok) {
+                  d += deltaM / 1000; // convert to km
+                }
+              } else if (acceptLegacySegment(deltaM)) {
+                // No timestamps (old path shape) — legacy distance-only gate.
+                d += deltaM / 1000;
               }
             }
             processedIdxRef.current = currentPath.length;
@@ -115,7 +142,7 @@ export const useRunTimer = (isRecording, locationStatus, path) => {
     }
 
     return () => clearInterval(timerRef.current);
-  }, [isRecording, locationStatus]);
+  }, [isRecording, locationStatus, fixesRef]);
 
   const resetMetrics = () => {
     setMetrics({ time: 0, distance: 0, pace: "0'00\"", calories: 0 });
@@ -124,7 +151,12 @@ export const useRunTimer = (isRecording, locationStatus, path) => {
     lastSplitRef.current = 0;
     splitStartTimeRef.current = 0;
     processedIdxRef.current = 1;
-    resumeSkipRef.current = true; // skip the initial GPS settle jump
+    settleBudgetRef.current = MAX_SETTLE_SKIPS; // skip the initial GPS settle jump
+    // Called synchronously on Start (before recording flips true) — anchor the
+    // wall clock here so background-tab throttle never undercounts time.
+    startedAtRef.current = Date.now();
+    pausedMsRef.current = 0;
+    pauseBeganRef.current = null;
   };
 
   return {

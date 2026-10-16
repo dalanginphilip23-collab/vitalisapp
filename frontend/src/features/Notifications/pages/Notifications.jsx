@@ -118,7 +118,7 @@ const Notifications = () => {
                 <span className="inline-block text-[9px] font-black uppercase tracking-widest text-[var(--accent)] bg-[var(--accent-bg)] px-2 py-0.5 rounded-full mb-1.5">
                   {(n.category || 'SYSTEM').toLowerCase()}
                 </span>
-                <p className="text-[13px]">{n.message}</p>
+                <p className="text-[13px] break-words overflow-wrap-anywhere text-[var(--text-primary)]">{n.message}</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
                   {!n.is_read && <button onClick={() => markRead(n.id)} className="text-[11px] font-bold text-[var(--accent)]">Mark read</button>}

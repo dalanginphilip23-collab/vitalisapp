@@ -1,4 +1,5 @@
 /** Readiness scoring from checkin/activity signals. Pure, no I/O. */
+const { READINESS_BANDS, READINESS_WEIGHTS, ACTIVITY_TARGETS } = require('../constants/thresholds');
 const levelScore = (level, good = 'LOW') => {
   const v = String(level || '').toUpperCase();
   if (good === 'LOW') {
@@ -26,9 +27,9 @@ function sleepDurationScore(hours) {
 
 function recommendation(score) {
   if (score == null) return null;
-  if (score >= 85) return 'High intensity training approved';
-  if (score >= 70) return 'Moderate training today';
-  if (score >= 50) return 'Light workout recommended';
+  if (score >= READINESS_BANDS.HIGH) return 'High intensity training approved';
+  if (score >= READINESS_BANDS.MODERATE) return 'Moderate training today';
+  if (score >= READINESS_BANDS.LIGHT) return 'Light workout recommended';
   return 'Rest recommended';
 }
 
@@ -36,13 +37,15 @@ function recommendation(score) {
 function calcReadiness({ checkin, sleepCount = 0, steps = 0, calories = 0 } = {}) {
   if (checkin) {
     const sorenessVal = checkin.soreness_level ?? checkin.soreness;
-    const sleepPts = sleepDurationScore(checkin.sleep_hours) * 30;
-    const qualityPts = levelScore(checkin.sleep_quality, 'HIGH') * 20;
-    const stressPts = levelScore(checkin.stress_level, 'LOW') * 15;
-    const sorePts = levelScore(sorenessVal, 'LOW') * 10;
-    const energyPts = levelScore(checkin.energy_level, 'HIGH') * 15;
+    const sleepPts = sleepDurationScore(checkin.sleep_hours) * READINESS_WEIGHTS.SLEEP_DURATION;
+    const qualityPts = levelScore(checkin.sleep_quality, 'HIGH') * READINESS_WEIGHTS.SLEEP_QUALITY;
+    const stressPts = levelScore(checkin.stress_level, 'LOW') * READINESS_WEIGHTS.STRESS;
+    const sorePts = levelScore(sorenessVal, 'LOW') * READINESS_WEIGHTS.SORENESS;
+    const energyPts = levelScore(checkin.energy_level, 'HIGH') * READINESS_WEIGHTS.ENERGY;
     const active = steps > 0 || calories > 0;
-    const activityPts = active ? 10 : Math.min(sleepCount * 3, 10);
+    const activityPts = active
+      ? ACTIVITY_TARGETS.CHECKIN_ACTIVITY_POINTS
+      : Math.min(sleepCount * ACTIVITY_TARGETS.SLEEP_LOG_POINTS, ACTIVITY_TARGETS.SLEEP_LOG_MAX);
     const readiness = Math.min(
       100,
       Math.round(sleepPts + qualityPts + stressPts + sorePts + energyPts + activityPts)
@@ -63,10 +66,10 @@ function calcReadiness({ checkin, sleepCount = 0, steps = 0, calories = 0 } = {}
       source: null,
       recommendation: null,
     };
-  const stepScore = Math.min(steps / 8000, 1) * 35;
-  const calScore = Math.min(calories / 600, 1) * 35;
-  const sleepScore = Math.min(sleepCount * 5, 25);
-  const readiness = Math.min(95, Math.round(stepScore + calScore + sleepScore));
+  const stepScore = Math.min(steps / ACTIVITY_TARGETS.STEP_TARGET, 1) * ACTIVITY_TARGETS.STEP_POINTS;
+  const calScore = Math.min(calories / ACTIVITY_TARGETS.CALORIE_TARGET, 1) * ACTIVITY_TARGETS.CALORIE_POINTS;
+  const sleepScore = Math.min(sleepCount * ACTIVITY_TARGETS.SLEEP_PER_LOG, ACTIVITY_TARGETS.SLEEP_MAX);
+  const readiness = Math.min(ACTIVITY_TARGETS.ACTIVITY_CAP, Math.round(stepScore + calScore + sleepScore));
   return {
     readiness,
     hasData: true,

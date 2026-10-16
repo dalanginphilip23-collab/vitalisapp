@@ -150,9 +150,9 @@ export function ProgressPanel({ userId, navigate }) {
         ) : (
           <div className="space-y-2">
             {data.bmi.map((b, i) => (
-              <div key={i} className="flex items-center justify-between text-[12px] border-b border-(--border-light) py-2">
-                <span className="font-bold">{b.date}</span>
-                <span className="text-(--text-muted)">{formatWeight(b.weight_kg, units)} · BMI {b.bmi}</span>
+              <div key={i} className="flex items-center justify-between gap-2 text-[12px] border-b border-(--border-light) py-2">
+                <span className="font-bold shrink-0">{b.date}</span>
+                <span className="text-(--text-muted) min-w-0 truncate text-right">{formatWeight(b.weight_kg, units)} · BMI {b.bmi}</span>
               </div>
             ))}
           </div>
@@ -165,9 +165,9 @@ export function ProgressPanel({ userId, navigate }) {
         ) : (
           <div className="space-y-2">
             {data.volume.map((v, i) => (
-              <div key={i} className="flex items-center justify-between text-[12px] border-b border-(--border-light) py-2">
-                <span className="font-bold">{v.date}</span>
-                <span className="text-(--text-muted)">{v.steps} steps · {v.calories_burned} kcal · {v.workout_duration_mins} min</span>
+              <div key={i} className="flex items-center justify-between gap-2 text-[12px] border-b border-(--border-light) py-2">
+                <span className="font-bold shrink-0">{v.date}</span>
+                <span className="text-(--text-muted) min-w-0 truncate text-right">{v.steps} steps · {v.calories_burned} kcal · {v.workout_duration_mins} min</span>
               </div>
             ))}
           </div>

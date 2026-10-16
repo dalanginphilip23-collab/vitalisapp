@@ -85,7 +85,7 @@ function MiniCalendar({ activeDays, selectedKey, onSelect }) {
               key={key}
               onClick={() => onSelect(selected ? null : key)}
               aria-label={`Select ${key}`}
-              className={`relative mx-auto w-10 h-10 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[11px] font-black transition-all
+              className={`relative mx-auto w-9 h-9 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[11px] font-black transition-all min-w-0
                 ${selected
                   ? 'bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] shadow-[var(--shadow-md)]'
                   : isToday
@@ -325,7 +325,7 @@ const Log = () => {
       <div className="glass-content flex flex-col md:flex-row flex-1 min-w-0 w-full">
       <SidebarAnalytics />
 
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-500 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 transition-all duration-500 overflow-hidden md:ml-[72px]">
 
         <header className="p-4 sm:p-5 md:p-8 border-b border-[var(--border-light)] flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4">
           <div>
@@ -346,7 +346,7 @@ const Log = () => {
           </div>
         </header>
 
-        <main className="p-4 md:p-8 flex flex-col gap-4 md:gap-6 pb-24 md:pb-8 w-full max-w-7xl mx-auto">
+        <main className="p-4 md:p-8 flex flex-col gap-4 md:gap-6 pb-24 md:pb-8 w-full max-w-7xl 2xl:max-w-[1400px] mx-auto">
 
           {!loading && !error && <ProgressChart history={history} />}
 
@@ -433,7 +433,7 @@ const Log = () => {
             </div>
 
             <div className="hidden md:block glass-card border border-[var(--border-light)] rounded-3xl overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto table-scroll">
                 <table className="w-full text-left min-w-[600px]">
                   <thead>
                     <tr className="border-b border-[var(--border-light)] bg-[var(--bg-tertiary)]">

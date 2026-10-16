@@ -6,7 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 export default function App() {
   return (
     <ErrorBoundary>
-    <div className="w-auto min-h-screen">
+    <div className="w-full min-h-screen">
       {ENV_ERROR ? (
         <p role="alert" className="bg-[var(--error)] text-[var(--text-inverse)] px-3 py-2 text-xs text-center font-semibold">
           {ENV_ERROR}

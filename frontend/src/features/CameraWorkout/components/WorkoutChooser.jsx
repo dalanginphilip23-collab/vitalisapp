@@ -77,7 +77,7 @@ export default function WorkoutChooser({ query, onQuery, onPick, onBack }) {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2">
           {[
             { label: 'Equipment', value: equipment, set: setEquipment, options: filterOpts.equipment, all: 'All' },
             { label: 'Muscle', value: muscle, set: setMuscle, options: filterOpts.muscles, all: 'All' },

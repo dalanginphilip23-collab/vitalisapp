@@ -100,7 +100,7 @@ const RunSummaryOverlay = ({ metrics, splits, formatTime, route, onSave, onDisca
             <button
               onClick={onDiscard}
               disabled={isSaving}
-              className="px-5 py-3 rounded-full text-[13px] font-bold text-[var(--text-muted)] hover:text-red-500 transition-colors disabled:opacity-40"
+              className="px-5 py-3 rounded-full text-[13px] font-bold text-[var(--text-muted)] hover:text-red-500 transition-colors disabled:opacity-40 whitespace-nowrap shrink-0"
             >
               Discard
             </button>

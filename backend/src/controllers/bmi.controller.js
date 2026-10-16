@@ -2,7 +2,7 @@
 const db = require('../config/db');
 const { callGeminiWithFallback } = require('../config/gemini');
 // Single BMI category source — matches planEngine (Onboarding) and the master plan.
-const { bmiCategory: getBmiCategory } = require('../utils/planEngine');
+const { bmiCategory: getBmiCategory, calcBmi } = require('../utils/planEngine');
 const log = require('../utils/logger');
 
 const VALID_GENDERS = ['male', 'female', 'other'];
@@ -25,8 +25,9 @@ async function postUserId(req,res,next){
         if (h < 50 || h > 300) return res.status(400).json({ error: 'height_cm out of range (50–300)' });
         if (w < 10 || w > 1000) return res.status(400).json({ error: 'weight_kg out of range (10–1000)' });
     
-        const heightM  = h / 100;
-        const bmi      = Number((w / (heightM * heightM)).toFixed(2));
+        // Single precision source: planEngine.calcBmi (1 decimal) keeps the
+        // BMI log, Profile page, and onboarding plan in agreement.
+        const bmi = calcBmi(w, h);
         if (!Number.isFinite(bmi)) return res.status(400).json({ error: 'Could not compute BMI from given values' });
         const category = getBmiCategory(bmi);
 

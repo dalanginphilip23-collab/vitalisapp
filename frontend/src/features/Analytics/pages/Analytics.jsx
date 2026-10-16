@@ -97,10 +97,10 @@ function AnalyticsInner({ USER_ID }) {
         <BottomNav variant="biometrics" />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:ml-[72px]">
         <Topbar sidebarExpanded={sidebarExpanded} userId={USER_ID} />
 
-        <main className="pt-14 md:pt-16 p-3 xs:p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-350 mx-auto">
+        <main className="pt-14 md:pt-16 p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[1400px] 2xl:max-w-[1536px] mx-auto">
           {activeTab === 'progress' ? (
             <ProgressHeader timeframe={timeframe} setTimeframe={setTimeframe} onBack={() => setActiveTab('training')} />
           ) : (

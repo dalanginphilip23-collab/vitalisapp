@@ -655,7 +655,7 @@ const CameraWorkout = () => {
       </div>
 
       <div
-        className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden transition-all duration-300"
+        className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden transition-all duration-300 md:ml-[72px]"
       >
         {/* ── Unified app topbar (menu + Vitalis + bell + theme + avatar) ── */}
         <Topbar sidebarExpanded={sidebarExpanded} userId={USER_ID} />
@@ -690,7 +690,7 @@ const CameraWorkout = () => {
                 </span>
               )}
               {requiredMins > 0 && (
-                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest whitespace-nowrap">
+                <span className="hidden min-[480px]:inline text-[10px] text-[var(--text-muted)] uppercase tracking-widest whitespace-nowrap">
                   Goal: {Math.ceil(requiredMins * 0.5)} min
                 </span>
               )}
@@ -788,7 +788,7 @@ const CameraWorkout = () => {
                     {workoutMode === 'hold' ? `Hold target · ${resolved?.label ?? ''}` : `Rep target · ${resolved?.label ?? ''}`}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2">
                   <div className="rounded-2xl bg-[var(--bg-hover)] border border-[var(--border-light)] px-3 py-2.5">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Alignment</p>
                     <p className="text-[13px] font-bold tabular-nums text-[var(--text-primary)] mt-0.5">

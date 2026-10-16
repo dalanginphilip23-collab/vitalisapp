@@ -102,7 +102,7 @@ function DailyGoalsCard({ calories, goal, protein, proteinGoal, carbs, carbsGoal
   return (
     <div className="space-y-4">
       <div className="glass-card rounded-2xl border border-[var(--border-light)] p-5">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col min-[380px]:flex-row items-center gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-[var(--text-muted)] font-semibold">Daily Calories</p>
             <p className="text-4xl font-black text-[var(--text-primary)] leading-none mt-1 tabular-nums">
@@ -128,7 +128,7 @@ function DailyGoalsCard({ calories, goal, protein, proteinGoal, carbs, carbsGoal
       </div>
       <div className="glass-card rounded-2xl border border-[var(--border-light)] p-5">
         <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.14em] mb-4">Macronutrients</p>
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
           {minis.map((m) => (
             <div key={m.label} className="flex flex-col items-center min-w-0">
               <MacroRing size={72} stroke={8} pct={m.pct} color={m.color} track="var(--bg-hover)">
@@ -283,8 +283,8 @@ export default function MealTracker() {  const { user } = useAuth();
       <div className="glass-content">
       <div className="hidden md:block"><Sidebar expanded={sidebarExpanded} setExpanded={setSidebarExpanded} /></div>
       <Topbar sidebarExpanded={sidebarExpanded} />
-      <main className={`pt-[56px] pb-20 md:pb-6 transition-all duration-200 ${sidebarExpanded ? 'md:ml-60' : 'md:ml-18'}`}>
-        <div className="max-w-[1120px] mx-auto w-full px-4 pt-4 md:px-6 pb-6">
+      <main className={`pt-[56px] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-6 transition-all duration-200 ${sidebarExpanded ? 'md:ml-60' : 'md:ml-18'}`}>
+        <div className="max-w-[1120px] 2xl:max-w-[1280px] mx-auto w-full px-4 pt-4 md:px-6 pb-6">
         <div className="flex flex-row items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
             <p className="text-[var(--accent)] font-bold tracking-[0.2em] text-[10px] uppercase">Nutrition</p>
@@ -330,7 +330,7 @@ export default function MealTracker() {  const { user } = useAuth();
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] text-[var(--text-muted)] mb-1.5">Meal type</label>
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     {MEAL_TYPES.map((t) => {
                       const active = manualForm.mealType === t;
                       return (

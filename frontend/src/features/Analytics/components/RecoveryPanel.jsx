@@ -60,9 +60,9 @@ export default function RecoveryPanel({ userId }) {
         ) : (
           <div className="space-y-2">
             {rows.map((r, i) => (
-              <div key={i} className="flex items-center justify-between text-[12px] border-b border-(--border-light) py-2">
-                <span className="font-bold">{r.date}</span>
-                <span className="text-(--text-muted)">{r.sleep_hours ?? '—'}h · Q{r.sleep_quality ?? '—'}/10 · R{r.recovery_score ?? '—'}/10 · {r.water_ml ?? 0} ml</span>
+              <div key={i} className="flex items-center justify-between gap-2 text-[12px] border-b border-(--border-light) py-2">
+                <span className="font-bold shrink-0">{r.date}</span>
+                <span className="text-(--text-muted) min-w-0 truncate text-right">{r.sleep_hours ?? '—'}h · Q{r.sleep_quality ?? '—'}/10 · R{r.recovery_score ?? '—'}/10 · {r.water_ml ?? 0} ml</span>
               </div>
             ))}
           </div>

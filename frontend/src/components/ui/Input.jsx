@@ -41,7 +41,7 @@ export default function Input({
           onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
           aria-invalid={hasError || undefined}
           aria-describedby={hasError ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
-          className={`w-full h-11 rounded-xl bg-[var(--input-bg)] border text-[14px] text-[var(--text-primary)] placeholder:text-[var(--input-placeholder)] outline-none transition-all
+          className={`w-full h-11 rounded-xl bg-[var(--input-bg)] border text-[16px] sm:text-[14px] text-[var(--text-primary)] placeholder:text-[var(--input-placeholder)] outline-none transition-all
             ${hasError ? 'border-red-500/60 focus:border-red-500/60 focus:ring-1 focus:ring-red-500/20' : 'border-[var(--input-border)] focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent-border)] focus:bg-[var(--bg-active)]'}
             ${icon && iconPosition === 'left' ? 'pl-11 pr-4' : icon && iconPosition === 'right' ? 'pl-4 pr-11' : 'px-4'}
             ${rightElement ? 'pr-11' : ''}

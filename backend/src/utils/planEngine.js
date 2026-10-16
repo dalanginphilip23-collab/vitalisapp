@@ -1,3 +1,5 @@
+const { KCAL } = require('../constants/thresholds');
+
 const ACTIVITY_FACTORS = {
   SEDENTARY: 1.2,
   LIGHTLY_ACTIVE: 1.375,
@@ -67,21 +69,21 @@ function generatePlan(input = {}) {
     const p = (pace || '').toUpperCase();
     switch (goalType) {
       case 'LOSE_WEIGHT':
-        dailyKcal = tdee - (p === 'GRADUAL' ? 300 : p === 'FASTER' ? 750 : 500);
+        dailyKcal = tdee - (p === 'GRADUAL' ? KCAL.LOSE_GRADUAL : p === 'FASTER' ? KCAL.LOSE_FASTER : KCAL.LOSE_DEFAULT);
         break;
       case 'GAIN_WEIGHT':
-        dailyKcal = tdee + (p === 'MODERATE' ? 400 : 250);
+        dailyKcal = tdee + (p === 'MODERATE' ? KCAL.GAIN_MODERATE : KCAL.GAIN_DEFAULT);
         break;
       case 'BUILD_MUSCLE':
-        dailyKcal = tdee + 200;
+        dailyKcal = tdee + KCAL.MUSCLE_SURPLUS;
         break;
       case 'PERFORMANCE':
-        dailyKcal = tdee + 100;
+        dailyKcal = tdee + KCAL.PERFORMANCE_SURPLUS;
         break;
       default:
         dailyKcal = tdee; // MAINTAIN_WEIGHT
     }
-    const floor = sex === 'female' ? 1200 : 1500;
+    const floor = sex === 'female' ? KCAL.FLOOR_FEMALE : KCAL.FLOOR_MALE;
     dailyKcal = Math.max(dailyKcal, floor);
   }
 
@@ -90,8 +92,8 @@ function generatePlan(input = {}) {
     fatG = null;
   if (dailyKcal && weightKg) {
     proteinG = Math.round((PROTEIN_PER_KG[goalType] || 1.6) * Number(weightKg));
-    fatG = Math.round((dailyKcal * 0.25) / 9);
-    carbsG = Math.max(0, Math.round((dailyKcal - proteinG * 4 - fatG * 9) / 4));
+    fatG = Math.round((dailyKcal * KCAL.FAT_RATIO) / KCAL.KCAL_PER_G_FAT);
+    carbsG = Math.max(0, Math.round((dailyKcal - proteinG * 4 - fatG * 9) / KCAL.KCAL_PER_G_PROTEIN_CARB));
   }
 
   return {

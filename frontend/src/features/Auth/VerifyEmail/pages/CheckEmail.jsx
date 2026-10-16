@@ -63,17 +63,17 @@ const CheckEmail = () => {
     <div data-theme="dark" className="relative min-h-screen w-full bg-[#0e0e0e] font-sans text-[#e5e2e1] overflow-x-hidden overflow-y-auto flex">
       <div className="fixed inset-0 z-0 bg-[url('/auth-gym.jpg')] bg-cover bg-[center_30%] brightness-[0.28] saturate-[0.7]" />
 
-      <div className="relative z-10 m-auto w-full max-w-[440px] p-6 flex flex-col items-center">
-        <div className="w-full bg-[#121210]/65 backdrop-blur-[32px] border border-[var(--accent)]/10 rounded-[20px] p-6 sm:p-10 text-center">
+      <div className="relative z-10 m-auto w-full max-w-[440px] p-4 sm:p-6 flex flex-col items-center">
+        <div className="w-full bg-[#121210]/65 backdrop-blur-[32px] border border-[var(--accent)]/10 rounded-[20px] p-5 sm:p-10 text-center">
           <div className="w-16 h-16 bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <span className="material-symbols-outlined text-[28px] text-[var(--accent)]">mark_email_unread</span>
           </div>
-          <h1 className="font-display font-extrabold text-[32px] tracking-wider leading-none mb-2">CHECK YOUR EMAIL</h1>
+          <h1 className="font-display font-extrabold text-[28px] sm:text-[32px] tracking-wider leading-[1.1] mb-2">CHECK YOUR EMAIL</h1>
           <p className="text-xs text-[#c4c9b0]/60 mb-1">We sent a verification link to:</p>
           <p className="text-sm font-bold text-[var(--accent)] mb-6 break-all">{email || 'your inbox'}</p>
 
-          {error && <p className="bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-semibold tracking-widest uppercase p-2.5 mb-4">{error}</p>}
-          {status && <p className="bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-lg text-[var(--accent)] text-[10px] font-semibold tracking-widest uppercase p-2.5 mb-4">{status}</p>}
+          {error && <p className="bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-semibold tracking-widest uppercase p-2.5 mb-4 break-words text-center">{error}</p>}
+          {status && <p className="bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-lg text-[var(--accent)] text-[10px] font-semibold tracking-widest uppercase p-2.5 mb-4 break-words text-center">{status}</p>}
 
           {!isProd && devLink && (
             <a href={devLink} className="block bg-white/5 border border-dashed border-white/20 rounded-lg text-[11px] text-white/60 p-3 mb-4 break-all hover:text-[var(--accent)] hover:border-[var(--accent)]/40 transition-colors">
@@ -102,12 +102,12 @@ const CheckEmail = () => {
           ) : (
             <form onSubmit={changeEmail} className="mt-2 space-y-3 text-left">
               <input type="password" required placeholder="Current password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl text-sm p-3 outline-none focus:border-[var(--accent)]/50 placeholder:text-white/10" />
+                className="w-full bg-white/5 border border-white/10 rounded-xl text-[16px] sm:text-sm p-3.5 outline-none focus:border-[var(--accent)]/50 placeholder:text-white/10" />
               <input type="email" required placeholder="New email address" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl text-sm p-3 outline-none focus:border-[var(--accent)]/50 placeholder:text-white/10" />
+                className="w-full bg-white/5 border border-white/10 rounded-xl text-[16px] sm:text-sm p-3.5 outline-none focus:border-[var(--accent)]/50 placeholder:text-white/10" />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setChanging(false)} className="flex-1 bg-white/5 border border-white/10 rounded-xl text-[11px] font-semibold uppercase p-3">Cancel</button>
-                <button type="submit" disabled={busy} className="flex-1 bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] font-bold text-[11px] uppercase p-3 rounded-xl disabled:opacity-50">
+                <button type="button" onClick={() => setChanging(false)} className="flex-1 bg-white/5 border border-white/10 rounded-xl text-[11px] font-semibold uppercase p-3 min-h-[44px]">Cancel</button>
+                <button type="submit" disabled={busy} className="flex-1 bg-[var(--accent-solid)] text-[var(--accent-solid-fg)] font-bold text-[11px] uppercase p-3 min-h-[44px] rounded-xl disabled:opacity-50">
                   {busy ? 'Saving...' : 'Update'}
                 </button>
               </div>

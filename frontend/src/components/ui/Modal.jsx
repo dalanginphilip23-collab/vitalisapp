@@ -7,7 +7,7 @@ const SIZES = {
   md: 'max-w-[420px]',
   lg: 'max-w-[480px]',
   xl: 'max-w-[560px]',
-  full: 'max-w-[90vw] max-h-[90vh]',
+  full: 'max-w-[90vw] max-h-[90vh] max-h-[90dvh]',
 };
 
 export default function Modal({
@@ -95,7 +95,7 @@ export default function Modal({
         <div
           ref={cardRef}
           tabIndex={-1}
-          className={`bg-[var(--bg-card)] shadow-2xl border border-[var(--border-light)] w-full ${sizeClass} rounded-2xl overflow-hidden flex flex-col max-h-[90vh] outline-none ${className}`}
+          className={`bg-[var(--bg-card)] shadow-2xl border border-[var(--border-light)] w-full ${sizeClass} rounded-2xl overflow-hidden flex flex-col max-h-[90vh] max-h-[90dvh] outline-none ${className}`}
           style={{ animation: 'modalCardIn 0.25s var(--ease-default) forwards' }}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}

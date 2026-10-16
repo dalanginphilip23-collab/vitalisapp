@@ -1,4 +1,5 @@
 const { AppError } = require("./errors");
+const { validId } = require("./ids");
 
 function assertOwner(req, paramUserId) {
   if (!req.user?.id) {
@@ -6,6 +7,11 @@ function assertOwner(req, paramUserId) {
   }
   if (paramUserId === undefined || paramUserId === null || paramUserId === "") {
     throw new AppError("Missing user id", 400, "BAD_REQUEST");
+  }
+  // Reject malformed ids with 400 (not 403) so client bugs are distinguishable
+  // from real forbidden access. String-compare afterwards to avoid coercion gaps.
+  if (!validId(paramUserId)) {
+    throw new AppError("Invalid user id", 400, "BAD_REQUEST");
   }
   if (String(req.user.id) !== String(paramUserId)) {
     throw new AppError("Forbidden", 403, "FORBIDDEN");

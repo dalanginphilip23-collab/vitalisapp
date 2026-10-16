@@ -66,7 +66,7 @@ const OtpInput = ({ value, onChange }) => {
   };
 
   return (
-    <div className="flex gap-2 justify-between" role="group" aria-label="6-digit verification code">
+    <div className="flex gap-1.5 sm:gap-2 justify-between" role="group" aria-label="6-digit verification code">
       {Array.from({ length: 6 }).map((_, i) => (
         <input
           key={i}
@@ -79,7 +79,7 @@ const OtpInput = ({ value, onChange }) => {
           onChange={e => handleChange(e, i)}
           onKeyDown={e => handleKey(e, i)}
           onPaste={handlePaste}
-          className={`w-full aspect-square max-w-[52px] text-center text-[20px] font-bold rounded-xl border bg-white/5 text-[#e5e2e1] outline-none transition-all duration-200
+          className={`w-full min-w-0 min-h-[44px] aspect-square max-w-[52px] text-center text-[20px] font-bold rounded-xl border bg-white/5 text-[#e5e2e1] outline-none transition-all duration-200
             ${digits[i]
               ? 'border-[var(--accent)]/50 bg-[var(--accent)]/[0.04] shadow-[0_0_0_3px_rgba(107,142,35,0.08)]'
               : 'border-white/10 focus:border-[var(--accent)]/40 focus:bg-[var(--accent)]/[0.04] focus:shadow-[0_0_0_3px_rgba(107,142,35,0.08)]'
@@ -91,7 +91,7 @@ const OtpInput = ({ value, onChange }) => {
 };
 
 const ErrorBox = ({ msg }) => (
-  <div className="bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-semibold tracking-[0.1em] uppercase py-2.5 px-3.5 mb-5 text-center">
+  <div className="bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-semibold tracking-[0.1em] uppercase py-2.5 px-3.5 mb-5 text-center break-words">
     {msg}
   </div>
 );
@@ -209,7 +209,7 @@ const ForgotPassword = () => {
   })();
 
   return (
-    <div data-theme="dark" className="min-h-screen flex items-center justify-center font-sans text-[#e5e2e1] overflow-hidden relative bg-[#0e0e0e]">
+    <div data-theme="dark" className="min-h-screen min-h-dvh flex items-center justify-center font-sans text-[#e5e2e1] overflow-x-hidden overflow-y-auto relative bg-[#0e0e0e]">
       <div className="bg-image fixed inset-0 z-0" />
 
       <div className="relative z-30 w-full flex items-center justify-center p-5 sm:p-[40px_20px]">
@@ -266,7 +266,7 @@ const ForgotPassword = () => {
                     onChange={e => { setEmail(e.target.value); clearError(); }}
                     onFocus={() => setFocused('email')}
                     onBlur={() => setFocused('')}
-                    className="w-full bg-white/5 border border-white/10 rounded-[10px] text-[#e5e2e1] text-[14px] p-[12px_15px] outline-none transition-all duration-200 placeholder:text-white/15 focus:border-[var(--accent)]/45 focus:bg-[var(--accent)]/[0.04] focus:ring-[3px] focus:ring-[var(--accent)]/10 box-border"
+                    className="w-full bg-white/5 border border-white/10 rounded-[10px] text-[#e5e2e1] text-[16px] sm:text-[14px] p-[12px_15px] outline-none transition-all duration-200 placeholder:text-white/15 focus:border-[var(--accent)]/45 focus:bg-[var(--accent)]/[0.04] focus:ring-[3px] focus:ring-[var(--accent)]/10 box-border"
                   />
                 </div>
                 <SubmitBtn loading={loading} label="Send Verification Code" />
@@ -289,7 +289,7 @@ const ForgotPassword = () => {
                   </label>
                   <OtpInput value={otp} onChange={v => { setOtp(v); clearError(); }} />
                 </div>
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-5">
                   <span className="text-[11px] text-[#c4c9b0]/35">Didn't receive it?</span>
                   <button
                     type="button"
@@ -334,7 +334,7 @@ const ForgotPassword = () => {
                       onChange={e => { setNewPassword(e.target.value); clearError(); }}
                       onFocus={() => setFocused('newpw')}
                       onBlur={() => setFocused('')}
-                      className="w-full bg-white/5 border border-white/10 rounded-[10px] text-[#e5e2e1] text-[14px] p-[12px_44px_12px_15px] outline-none transition-all duration-200 placeholder:text-white/15 focus:border-[var(--accent)]/45 focus:bg-[var(--accent)]/[0.04] focus:ring-[3px] focus:ring-[var(--accent)]/10 box-border"
+                      className="w-full bg-white/5 border border-white/10 rounded-[10px] text-[#e5e2e1] text-[16px] sm:text-[14px] p-[12px_44px_12px_15px] outline-none transition-all duration-200 placeholder:text-white/15 focus:border-[var(--accent)]/45 focus:bg-[var(--accent)]/[0.04] focus:ring-[3px] focus:ring-[var(--accent)]/10 box-border"
                     />
                     <button type="button" onClick={() => setShowPw(s => !s)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
@@ -366,7 +366,7 @@ const ForgotPassword = () => {
                     onChange={e => { setConfirmPw(e.target.value); clearError(); }}
                     onFocus={() => setFocused('confirmpw')}
                     onBlur={() => setFocused('')}
-                    className={`w-full bg-white/5 border rounded-[10px] text-[#e5e2e1] text-[14px] p-[12px_15px] outline-none transition-all duration-200 placeholder:text-white/15 focus:ring-[3px] box-border
+                    className={`w-full bg-white/5 border rounded-[10px] text-[#e5e2e1] text-[16px] sm:text-[14px] p-[12px_15px] outline-none transition-all duration-200 placeholder:text-white/15 focus:ring-[3px] box-border
                       ${confirmPw && newPassword !== confirmPw
                         ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
                         : 'border-white/10 focus:border-[var(--accent)]/45 focus:bg-[var(--accent)]/[0.04] focus:ring-[var(--accent)]/10'

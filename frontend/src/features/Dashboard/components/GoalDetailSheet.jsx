@@ -57,7 +57,7 @@ export default function GoalDetailSheet({ userId, goal, currentWeightKg, progres
           </div>
 
           {/* Daily targets */}
-          <div className="grid grid-cols-2 gap-2.5 mt-4">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2.5 mt-4">
             <div className="rounded-[14px] bg-[var(--bg-hover)] border border-[var(--border-light)] p-3.5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Daily Calories</p>
               <p className="text-[20px] font-black mt-0.5">

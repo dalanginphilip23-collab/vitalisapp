@@ -211,7 +211,7 @@ const Landing = () => {
       <main>
         {/* ── Home / hero ──────────────────────────────────────────── */}
         <section id="top" className="px-5 sm:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24">
-          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div>
               <Reveal delay={0.05}>
                 <h1
@@ -276,7 +276,7 @@ const Landing = () => {
             </div>
 
             <Reveal delay={0.1}>
-              <figure className="relative">
+              <figure className="relative mb-6 lg:mb-0">
                 <div className="rounded-2xl overflow-hidden border border-[var(--border-light)] shadow-[var(--shadow-lg)]">
                   <img
                     src={GYM_BG}
@@ -285,7 +285,7 @@ const Landing = () => {
                     loading="eager"
                   />
                 </div>
-                <div className="absolute -bottom-5 left-4 right-4 sm:left-6 sm:right-auto bg-[var(--bg-card)] border border-[var(--border-light)] rounded-xl shadow-[var(--shadow-md)] px-5 py-4 flex items-center gap-4">
+                <div className="absolute -bottom-5 left-4 right-4 sm:left-6 sm:right-auto sm:max-w-[calc(100%-3rem)] bg-[var(--bg-card)] border border-[var(--border-light)] rounded-xl shadow-[var(--shadow-md)] px-5 py-4 flex items-center gap-4">
                   <div className="w-11 h-11 rounded-lg bg-[var(--accent-bg)] flex items-center justify-center shrink-0">
                     <Icon name="bedtime" className="text-[22px] text-[var(--accent)]" />
                   </div>

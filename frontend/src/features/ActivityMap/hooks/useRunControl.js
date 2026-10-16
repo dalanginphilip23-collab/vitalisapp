@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 
-export const useRunControls = ({ userLocation, startCoords, metrics, path, splits, resetMetrics, setPath }) => {
+export const useRunControls = ({ userLocation, startCoords, metrics, path, splits, resetMetrics, setPath, resetFixes }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [hasPaused, setHasPaused]     = useState(false);
   const [runFinished, setRunFinished] = useState(false);
@@ -13,6 +13,7 @@ export const useRunControls = ({ userLocation, startCoords, metrics, path, split
     const origin = userLocation || startCoords;
     resetMetrics();
     setPath([origin]);
+    resetFixes?.();
     setHasPaused(false);
     setRunFinished(false);
     setIsRecording(true);
@@ -35,6 +36,7 @@ export const useRunControls = ({ userLocation, startCoords, metrics, path, split
     setRunFinished(false);
     resetMetrics();
     setPath([userLocation || fallbackCoords]);
+    resetFixes?.();
     setHasPaused(false);
   };
 

@@ -68,7 +68,7 @@ export const MobileMenu = ({ open, onClose, navigate }) => (
         aria-label="Site menu"
       >
         <div
-          className="absolute top-0 left-0 right-0 bg-[var(--bg-primary)] border-b border-[var(--border-light)] px-5 pt-24 pb-6"
+          className="absolute top-0 left-0 right-0 bg-[var(--bg-primary)] border-b border-[var(--border-light)] px-5 pt-24 pb-6 max-h-[calc(100dvh-1rem)] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <nav className="flex flex-col">
@@ -150,7 +150,13 @@ export const FeatureCarousel = ({ features, shots }) => {
       if (ticking) return;
       ticking = true;
       window.requestAnimationFrame(() => {
-        const w = track.children[0]?.offsetWidth || 1;
+        const first = track.children[0];
+        // Include the flex gap (16px) in the slide stride — offsetWidth alone
+        // ignores it, desyncing dots/arrows after slide 1.
+        const gap = first && track.children[1]
+          ? Math.max(0, track.children[1].offsetLeft - first.offsetLeft - first.offsetWidth)
+          : 16;
+        const w = (first?.offsetWidth || 1) + gap;
         setIndex(Math.max(0, Math.min(total - 1, Math.round(track.scrollLeft / w))));
         ticking = false;
       });

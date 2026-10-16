@@ -158,8 +158,8 @@ const Profile = () => {
               Solid deep-green block (no gradient wash) with light text in
               both themes — dark media block, tokens can't express it. */}
           <div className="relative rounded-[20px] overflow-hidden text-[#EAF2EA] shadow-md mt-4 bg-[#1B4332] border border-white/10">
-            <div className="flex items-center justify-between gap-2 px-4 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
-              <div className="text-center w-[64px] sm:w-[76px] shrink-0">
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-3 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
+              <div className="text-center w-[56px] sm:w-[76px] shrink-0">
                 <p className="text-[20px] sm:text-[22px] font-black leading-none tabular-nums">{streakDays}</p>
                 <p className="text-[10px] font-bold mt-1 leading-tight opacity-80">Streak<br />days</p>
               </div>
@@ -178,14 +178,14 @@ const Profile = () => {
                     <span className="material-symbols-outlined text-[15px]">{pickerOpen ? 'close' : 'photo_camera'}</span>
                   </button>
                 </div>
-                <p className="text-[15px] font-extrabold tracking-tight text-center leading-tight mt-2 break-words max-w-[180px] sm:max-w-[220px]">{formData.fullName || 'Athlete'}</p>
+                <p className="text-[15px] font-extrabold tracking-tight text-center leading-tight mt-2 break-words max-w-[140px] min-[380px]:max-w-[180px] sm:max-w-[220px]">{formData.fullName || 'Athlete'}</p>
                 <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-black opacity-80">
                   <span className="material-symbols-outlined text-[13px]">crown</span>
                   {onboarding?.goalType ? goalLabel(onboarding.goalType) : 'No goal yet'}
                 </span>
               </div>
               <div className="w-px self-stretch bg-white/15 rounded-full" aria-hidden="true" />
-              <div className="text-center w-[64px] sm:w-[76px] shrink-0">
+              <div className="text-center w-[56px] sm:w-[76px] shrink-0">
                 <p className="text-[22px] font-black leading-none tabular-nums">
                   {weightProgress == null ? '—' : weightProgress.diff != null ? Math.abs(weightProgress.diff).toFixed(1) : `${weightProgress.pct}%`}
                 </p>

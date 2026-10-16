@@ -12,10 +12,19 @@ export const useGeolocation = (isRecording) => {
   const [locationStatus, setLocationStatus] = useState(() => (
     typeof navigator !== 'undefined' && navigator.geolocation ? 'pending' : 'denied'
   ));
+  // Live fix stream while recording: false on watch error/timeout, true on
+  // every accepted fix. locationStatus stays 'granted' (permission), this
+  // tracks signal — the badge would otherwise claim "GPS Active" mid-dropout.
+  const [gpsLive, setGpsLive] = useState(true);
   const [mapCenter, setMapCenter]           = useState(FALLBACK_COORDS);
   const [path, setPath]                     = useState([FALLBACK_COORDS]);
 
   const watchIdRef = useRef(null);
+  // Per-fix metadata parallel to `path` (same indexes): { t, acc, speed }.
+  // `path` stays [lat, lng] for Leaflet; timestamps/accuracy live here so the
+  // timer can filter by speed instead of raw distance. Reset alongside path.
+  const fixesRef = useRef([]);
+  const resetFixes = () => { fixesRef.current = []; };
 
   // Get initial position on mount
   useEffect(() => {
@@ -41,14 +50,23 @@ export const useGeolocation = (isRecording) => {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
           // Drop low-accuracy fixes (tunnels, indoors, urban canyon) —
-          // the timer counts them as distance otherwise.
+          // the timer counts them as distance otherwise. Missing accuracy
+          // is also dropped: real fixes always carry it (spec), nulls only
+          // come from mocks — and untrusted fixes must not bill distance.
           const acc = pos.coords?.accuracy;
-          if (Number.isFinite(acc) && acc > MAX_FIX_ACCURACY_M) return;
+          if (!Number.isFinite(acc) || acc > MAX_FIX_ACCURACY_M) return;
           const c = [pos.coords.latitude, pos.coords.longitude];
+          fixesRef.current = [...fixesRef.current, {
+            t: Number.isFinite(pos.timestamp) ? pos.timestamp : Date.now(),
+            acc,
+            speed: Number.isFinite(pos.coords?.speed) ? pos.coords.speed : null,
+          }];
           setPath(prev => [...prev, c]);
           setUserLocation(c);
+          setGpsLive(true);
         },
         (err) => {
+          setGpsLive(false);
           if (import.meta.env.DEV) console.warn('[geolocation] watch error:', err?.message);
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
@@ -72,8 +90,11 @@ export const useGeolocation = (isRecording) => {
     setUserLocation,
     startCoords,
     locationStatus,
+    gpsLive,
     mapCenter,
     path,
     setPath,
+    fixesRef,
+    resetFixes,
   };
 };

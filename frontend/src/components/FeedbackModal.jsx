@@ -137,16 +137,16 @@ export default function FeedbackModal({ onClose }) {
                       if (e.key === 'ArrowRight' && rating < 5) { e.preventDefault(); pickRating(rating + 1); }
                       if (e.key === 'ArrowLeft' && rating > 1) { e.preventDefault(); pickRating(rating - 1); }
                     }}
-                    className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl flex items-center justify-center transition-transform active:scale-90 hover:bg-[var(--bg-hover)]"
+                    className="w-10 h-10 min-w-[44px] min-h-[44px] sm:w-12 sm:h-12 sm:min-w-[48px] sm:min-h-[48px] rounded-xl flex items-center justify-center transition-transform active:scale-90 hover:bg-[var(--bg-hover)]"
                   >
-                    <span className={`material-symbols-outlined text-[32px] leading-none ${lit ? 'text-[var(--accent)]' : 'text-[var(--text-disabled)]'}`}
+                    <span className={`material-symbols-outlined text-[28px] sm:text-[32px] leading-none ${lit ? 'text-[var(--accent)]' : 'text-[var(--text-disabled)]'}`}
                       style={lit ? { fontVariationSettings: "'FILL' 1" } : undefined}>
                       star
                     </span>
                   </button>
                 );
               })}
-              <span className="text-[11px] font-bold text-[var(--text-muted)] ml-1 min-w-[52px]" aria-live="polite">
+              <span className="text-[11px] font-bold text-[var(--text-muted)] ml-1 min-w-0 sm:min-w-[52px] hidden min-[380px]:block" aria-live="polite">
                 {(hoverRating || rating) > 0 ? RATING_LABELS[hoverRating || rating] : ''}
               </span>
             </div>
@@ -160,7 +160,7 @@ export default function FeedbackModal({ onClose }) {
               rows={4}
               required
               maxLength={2000}
-              className="w-full rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] p-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--input-placeholder)] focus:outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent-border)] resize-none"
+              className="w-full rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] p-3 text-[16px] sm:text-[13px] text-[var(--text-primary)] placeholder:text-[var(--input-placeholder)] focus:outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent-border)] resize-none"
             />
             <p className="text-[10px] text-[var(--text-muted)] text-right">{form.message.length}/2000</p>
           </div>

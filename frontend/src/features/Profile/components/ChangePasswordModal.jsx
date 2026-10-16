@@ -66,15 +66,16 @@ const ChangePasswordModal = ({ onClose, onSuccess }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center px-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="change-pw-title"
+      style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 0px))', paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="absolute inset-0 bg-[var(--bg-overlay)]" onClick={onClose} />
 
       <div
-        className="relative z-10 w-full max-w-sm glass-panel border border-[var(--border-light)] rounded-2xl p-7"
+        className="relative z-10 w-full max-w-sm glass-panel border border-[var(--border-light)] rounded-2xl p-7 my-auto max-h-[90dvh] overflow-y-auto"
         style={{ animation: 'fadeScale 0.2s ease forwards' }}
       >
         <div className="flex items-center justify-between mb-5">

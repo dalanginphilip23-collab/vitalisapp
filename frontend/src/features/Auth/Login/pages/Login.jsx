@@ -112,8 +112,8 @@ const Login = () => {
         </div>
 
         {/* Right Glass Panel */}
-        <div className="flex items-center justify-center p-4 sm:p-8">
-          <div className="v-card relative w-full max-w-[400px] bg-[#121210]/65 backdrop-blur-[32px] saturate-[140%] border border-[var(--accent)]/10 rounded-[20px] p-6 sm:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="flex items-center justify-center p-4 sm:p-8 pt-20 sm:pt-8">
+          <div className="v-card relative w-full max-w-[400px] bg-[#121210]/65 backdrop-blur-[32px] saturate-[140%] border border-[var(--accent)]/10 rounded-[20px] p-5 sm:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)]">
 
             {/* Logo */}
             <div className="v-card-logo flex items-center gap-3 mb-9">
@@ -126,7 +126,7 @@ const Login = () => {
 
             <form onSubmit={(e) => handleSubmit(e, { email, password })} className="space-y-5">
               {error && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-semibold tracking-widest uppercase p-2.5 text-center">
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-semibold tracking-widest uppercase p-2.5 text-center break-words">
                   {error}
                 </div>
               )}
@@ -138,7 +138,7 @@ const Login = () => {
                 </label>
                 <input
                   type="email"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl text-sm p-3.5 outline-none transition-all focus:border-[var(--accent)]/50 focus:bg-[var(--accent)]/5 focus:ring-4 focus:ring-[var(--accent)]/10 placeholder:text-white/10 disabled:opacity-50"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl text-[16px] sm:text-sm p-3.5 outline-none transition-all focus:border-[var(--accent)]/50 focus:bg-[var(--accent)]/5 focus:ring-4 focus:ring-[var(--accent)]/10 placeholder:text-white/10 disabled:opacity-50"
                   placeholder="athlete@vitalis.io"
                   required
                   disabled={loading}
@@ -157,7 +157,7 @@ const Login = () => {
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl text-sm p-3.5 pr-12 outline-none transition-all focus:border-[var(--accent)]/50 focus:bg-[var(--accent)]/5 focus:ring-4 focus:ring-[var(--accent)]/10 placeholder:text-white/10 disabled:opacity-50"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl text-[16px] sm:text-sm p-3.5 pr-12 outline-none transition-all focus:border-[var(--accent)]/50 focus:bg-[var(--accent)]/5 focus:ring-4 focus:ring-[var(--accent)]/10 placeholder:text-white/10 disabled:opacity-50"
                     placeholder="••••••••••••"
                     required
                     disabled={loading}
@@ -178,8 +178,8 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="v-card-forgot flex justify-end -mt-3">
-                <Link to="/reset-password" className="text-[10px] font-semibold tracking-widest uppercase text-[var(--accent-dark)]/70 hover:text-[var(--accent)] transition-colors">
+              <div className="v-card-forgot flex justify-end">
+                <Link to="/reset-password" className="text-[10px] font-semibold tracking-widest uppercase text-[var(--accent-dark)]/70 hover:text-[var(--accent)] transition-colors py-2 min-h-[32px] inline-flex items-center">
                   Forgot Password?
                 </Link>
               </div>

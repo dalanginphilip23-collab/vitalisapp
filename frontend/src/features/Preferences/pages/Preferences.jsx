@@ -144,7 +144,7 @@ const Preferences = () => {
               {['metric', 'imperial'].map((u) => (
                 <button key={u} onClick={() => { setUnits(u); persist({ units: u, step_goal: stepGoal }); }}
                   aria-pressed={units === u}
-                  className={`h-11 rounded-[12px] text-[13px] font-bold capitalize transition-colors ${units === u ? 'bg-[var(--accent-solid)] text-[var(--accent-solid-fg)]' : 'border border-[var(--border-light)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>
+                  className={`min-h-[44px] h-auto py-2 px-2 rounded-[12px] text-[12px] font-bold capitalize whitespace-nowrap transition-colors ${units === u ? 'bg-[var(--accent-solid)] text-[var(--accent-solid-fg)]' : 'border border-[var(--border-light)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>
                   {u === 'metric' ? 'Metric (kg, cm)' : 'Imperial (lb, ft)'}
                 </button>
               ))}

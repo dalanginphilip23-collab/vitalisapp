@@ -54,19 +54,20 @@ const CaloriesRing = ({ remaining, goal, food, size = 112, stroke = 10 }) => {
 };
 
 const MiniCard = ({ title, icon, value, sub, progress, onClick, actionIcon }) => (
-  <button onClick={onClick} className="text-left glass-card border border-[var(--border-light)] rounded-[16px] p-4 hover:shadow-[0_4px_16px_rgba(46,82,51,0.12)] transition-all w-full min-w-0">
+  <button onClick={onClick} className="text-left glass-card border border-[var(--border-light)] rounded-[16px] p-4 hover:shadow-[0_4px_16px_rgba(46,82,51,0.12)] transition-all w-full min-w-0 h-full flex flex-col">
     <div className="flex items-start justify-between gap-2">
-      <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] truncate">{title}</p>
+      <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] truncate min-w-0">{title}</p>
       {actionIcon && <span className="w-6 h-6 rounded-full bg-[var(--bg-hover)] flex items-center justify-center -mt-1 shrink-0"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">{actionIcon}</span></span>}
     </div>
     <div className="flex items-center gap-2 mt-1.5 min-w-0">
       <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-[var(--accent-border)] bg-[var(--bg-card)]">
         <span className="material-symbols-outlined text-[16px] text-[var(--accent)]">{icon}</span>
       </span>
-      <span className="text-[20px] font-black tracking-tight text-[var(--text-primary)] truncate">{value}</span>
+      <span className={`text-[20px] font-black tracking-tight truncate tabular-nums ${value === '—' ? 'text-[var(--text-disabled)]' : 'text-[var(--text-primary)]'}`}>{value}</span>
     </div>
     <p className="text-[12px] text-[var(--text-muted)] mt-1 truncate">{sub}</p>
-    <div className="h-1.5 bg-[var(--bg-hover)] rounded-full mt-2.5 overflow-hidden">
+    <div className="flex-1 min-h-2.5" aria-hidden="true" />
+    <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
       <div className="h-full rounded-full transition-all duration-500 bg-[var(--accent)]" style={{ width: `${Math.min(100, Math.round(progress))}%` }} />
     </div>
   </button>
@@ -225,8 +226,8 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans overflow-x-hidden">
       <div className="hidden md:block"><Sidebar onClick={handleLogout} expanded={sidebarExpanded} setExpanded={setSidebarExpanded} onFeedback={() => setFeedbackOpen(true)} /></div>
       <Topbar sidebarExpanded={sidebarExpanded} userId={USER_ID} />
-      <main className={`pt-[56px] pb-20 md:pb-6 transition-all duration-300 ${sidebarExpanded ? 'md:ml-[240px]' : 'md:ml-[72px] ml-0'}`}>
-        <div className="max-w-[420px] mx-auto w-full px-3 pt-4 pb-6 md:max-w-3xl md:px-6 lg:max-w-5xl xl:max-w-6xl relative">
+      <main className={`pt-[56px] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-6 transition-all duration-300 ${sidebarExpanded ? 'md:ml-[240px]' : 'md:ml-[72px] ml-0'}`}>
+        <div className="max-w-[420px] mx-auto w-full px-3 pt-4 pb-6 md:max-w-3xl md:px-6 lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl relative">
           <div className="glass-content">
           {/* Header */}
           {dashboardError && (            <div className="mt-3">
@@ -264,53 +265,53 @@ const Dashboard = () => {
               onScroll={onHeroScroll}
               className="flex overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden no-scrollbar"
             >
-              <div className="min-w-full snap-center px-4 py-3 sm:p-5">
+              <div className="min-w-full snap-center px-3 min-[400px]:px-4 py-3 sm:p-5 flex flex-col justify-center">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-[18px] font-black text-[var(--text-primary)] leading-none">Calories</p>
                     <p className="text-[12px] text-[var(--text-muted)] mt-1">Goal − food + exercise</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-5 mt-4 min-w-0">
+                <div className="flex flex-row items-center gap-3 sm:gap-5 mt-4 min-w-0">
                   <CaloriesRing remaining={remaining} goal={tKcal} food={foodKcal} />
-                  <div className="flex-1 space-y-3 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] dark:bg-[var(--bg-hover)] flex items-center justify-center"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">flag</span></span>
-                      <div className="flex-1 flex items-center justify-between">
-                        <span className="text-[13px] text-[var(--text-muted)]">Base Goal</span>
-                        <span className="text-[15px] font-black text-[var(--text-primary)]">{tKcal.toLocaleString()}</span>
+                  <div className="flex-1 space-y-3 min-w-0 w-full">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] dark:bg-[var(--bg-hover)] flex items-center justify-center shrink-0"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">flag</span></span>
+                      <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-[13px] text-[var(--text-muted)] truncate min-w-0">Base Goal</span>
+                        <span className="text-[15px] font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{tKcal.toLocaleString()}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">restaurant</span></span>
-                      <div className="flex-1 flex items-center justify-between">
-                        <span className="text-[13px] text-[var(--text-muted)]">Food</span>
-                        <span className="text-[15px] font-black text-[var(--text-primary)]">{foodKcal.toLocaleString()}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center shrink-0"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">restaurant</span></span>
+                      <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-[13px] text-[var(--text-muted)] truncate min-w-0">Food</span>
+                        <span className="text-[15px] font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{foodKcal.toLocaleString()}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">local_fire_department</span></span>
-                      <div className="flex-1 flex items-center justify-between">
-                        <span className="text-[13px] text-[var(--text-muted)]">Exercise</span>
-                        <span className="text-[15px] font-black text-[var(--text-primary)]">{caloriesBurned.toLocaleString()}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center shrink-0"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">local_fire_department</span></span>
+                      <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-[13px] text-[var(--text-muted)] truncate min-w-0">Exercise</span>
+                        <span className="text-[15px] font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{caloriesBurned.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="min-w-full snap-center p-4 sm:p-5">
+              <div className="min-w-full snap-center p-4 sm:p-5 flex flex-col justify-center">
                 <p className="text-[18px] font-black text-[var(--text-primary)] leading-none">Macros</p>
                 <p className="text-[12px] text-[var(--text-muted)] mt-1">Today&apos;s intake</p>
-                <div className="mt-4 space-y-3.5">
+                <div className="mt-4 space-y-5">
                   {[
                     { label: 'Protein', actual: meals.protein, target: goal?.proteinG ?? 50, unit: 'g', color: 'var(--accent)' },
                     { label: 'Carbs', actual: meals.carbs, target: goal?.carbsG ?? 275, unit: 'g', color: 'var(--accent)' },
                     { label: 'Fat', actual: meals.fat, target: goal?.fatG ?? 78, unit: 'g', color: 'var(--accent)' },
                   ].map(m => (
                     <div key={m.label}>
-                      <div className="flex items-center justify-between text-[13px]">
-                        <span className="text-[var(--text-muted)]">{m.label}</span>
-                        <span className="font-black text-[var(--text-primary)]">{m.actual}{m.unit} <span className="font-bold text-[var(--text-muted)]">/ {m.target}{m.unit}</span></span>
+                      <div className="flex items-center justify-between gap-3 text-[13px]">
+                        <span className="text-[var(--text-muted)] truncate min-w-0">{m.label}</span>
+                        <span className="font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{m.actual}{m.unit} <span className="font-bold text-[var(--text-muted)]">/ {m.target}{m.unit}</span></span>
                       </div>
                       <div className="h-2 bg-[var(--bg-hover)] rounded-full mt-1.5 overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${m.target ? Math.min(100, (m.actual / m.target) * 100) : 0}%`, background: m.color }} />
@@ -319,7 +320,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               </div>
-              <div className="min-w-full snap-center p-4 sm:p-5">
+              <div className="min-w-full snap-center p-4 sm:p-5 flex flex-col justify-center">
                 <p className="text-[18px] font-black text-[var(--text-primary)] leading-none">Activity</p>
                 <p className="text-[12px] text-[var(--text-muted)] mt-1">Workouts and rest today</p>
                 {goal && (
@@ -327,11 +328,11 @@ const Dashboard = () => {
                     {goalLabel(goal.goalType)}{goal.targetWeightKg != null ? ` · ${fmtW(currentWeightKg ?? goal.weightKg)} → ${fmtW(goal.targetWeightKg)}` : ''}
                   </p>
                 )}
-                <div className="mt-4 space-y-3.5">
+                <div className="mt-4 space-y-5">
                   <div>
-                    <div className="flex items-center justify-between text-[13px]">
-                      <span className="text-[var(--text-muted)]">Workout</span>
-                      <span className="font-black text-[var(--text-primary)]">{workoutMinToday} <span className="font-bold text-[var(--text-muted)]">/ {workoutGoalMin} min</span></span>
+                    <div className="flex items-center justify-between gap-3 text-[13px]">
+                      <span className="text-[var(--text-muted)] truncate min-w-0">Workout</span>
+                      <span className="font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{workoutMinToday} <span className="font-bold text-[var(--text-muted)]">/ {workoutGoalMin} min</span></span>
                     </div>
                     <div className="h-2 bg-[var(--bg-hover)] rounded-full mt-1.5 overflow-hidden">
                       <div className="h-full rounded-full bg-[var(--accent)] transition-all duration-500" style={{ width: `${workoutGoalMin ? Math.min(100, (workoutMinToday / workoutGoalMin) * 100) : 0}%` }} />
@@ -367,23 +368,23 @@ const Dashboard = () => {
                       )}
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--text-muted)]">Sleep</span>
-                    <span className="font-black text-[var(--text-primary)]">{data.stats?.sleep_duration ? `${data.stats.sleep_duration}h` : '—'} <span className="font-bold text-[var(--text-muted)]">/ 8h ref</span></span>
+                  <div className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="text-[var(--text-muted)] truncate min-w-0">Sleep</span>
+                    <span className="font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{data.stats?.sleep_duration ? `${data.stats.sleep_duration}h` : '—'} <span className="font-bold text-[var(--text-muted)]">/ 8h ref</span></span>
                   </div>
                 </div>
               </div>
-              <div className="min-w-full snap-center p-4 sm:p-5">
+              <div className="min-w-full snap-center p-4 sm:p-5 flex flex-col justify-center">
                 <p className="text-[18px] font-black text-[var(--text-primary)] leading-none">Recovery</p>
                 <p className="text-[12px] text-[var(--text-muted)] mt-1">Rest and readiness</p>
-                <div className="mt-4 space-y-3.5">
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--text-muted)]">Sleep quality</span>
-                    <span className="font-black text-[var(--text-primary)]">{data.stats?.sleep_quality ?? checkin?.sleep_quality ?? '—'}</span>
+                <div className="mt-4 space-y-5">
+                  <div className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="text-[var(--text-muted)] truncate min-w-0">Sleep quality</span>
+                    <span className="font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{data.stats?.sleep_quality ?? checkin?.sleep_quality ?? '—'}</span>
                   </div>
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--text-muted)]">Check-in</span>
-                    <span className="font-black text-[var(--text-primary)]">{checkin ? `${checkin.sleep_hours ?? '—'}h • ${checkin.sleep_quality ?? ''}` : 'Not yet'}</span>
+                  <div className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="text-[var(--text-muted)] truncate min-w-0">Check-in</span>
+                    <span className="font-black text-[var(--text-primary)] tabular-nums whitespace-nowrap shrink-0">{checkin ? `${checkin.sleep_hours ?? '—'}h • ${checkin.sleep_quality ?? ''}` : 'Not yet'}</span>
                   </div>
                   <button
                     onClick={() => setCheckInOpen(true)}
@@ -421,21 +422,24 @@ const Dashboard = () => {
           </div>
 
           {/* 2x2 grid like MFP → 4 across on wide desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
             <MiniCard title="Steps" icon="footprint" value={steps > 0 ? steps.toLocaleString() : '—'} sub={steps > 0 ? `Goal: ${stepGoalTarget.toLocaleString()} steps` : 'No steps yet today'} progress={(steps/stepGoalTarget)*100} onClick={() => navigate('/dashboard/activity-map')} />
-            <div className="glass-card border border-black/[0.06] dark:border-white/[0.06] rounded-[14px] p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Exercise</p>
-                <button onClick={() => navigate('/dashboard/workouts')} className="w-6 h-6 rounded-full bg-[var(--bg-hover)] flex items-center justify-center"><span className="material-symbols-outlined text-[16px]">add</span></button>
+            <div className="glass-card border border-[var(--border-light)] rounded-[16px] p-4 h-full flex flex-col min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] truncate min-w-0">Exercise</p>
+                <button onClick={() => navigate('/dashboard/workouts')} aria-label="Log exercise" className="w-6 h-6 rounded-full bg-[var(--bg-hover)] flex items-center justify-center shrink-0 -mt-1"><span className="material-symbols-outlined text-[16px]">add</span></button>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">local_fire_department</span></span>
-                <span className="text-[18px] font-black text-[var(--text-primary)]">{hasActivity ? `${caloriesBurned} cal` : '—'}</span>
+              <div className="flex items-center gap-2 mt-1.5 min-w-0">
+                <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center shrink-0"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">local_fire_department</span></span>
+                <span className={`text-[20px] font-black tracking-tight truncate tabular-nums ${hasActivity ? 'text-[var(--text-primary)]' : 'text-[var(--text-disabled)]'}`}>{hasActivity ? `${caloriesBurned} cal` : '—'}</span>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">timer</span></span>
-                <span className="text-[16px] font-black text-[var(--text-primary)]">{hasActivity ? (hrs > 0 ? `${hrs}:${String(mins).padStart(2,'0')}` : `${mins}`) : '—'}</span>
-                <span className="text-[13px] font-bold text-[var(--text-primary)]">{hasActivity ? (hrs ? 'hr' : 'min') : 'No activity yet'}</span>
+              <div className="flex items-center gap-2 mt-1 min-w-0">
+                <span className="w-7 h-7 rounded-full bg-[var(--bg-card)] border border-[var(--accent-border)] flex items-center justify-center shrink-0"><span className="material-symbols-outlined text-[16px] text-[var(--accent)]">timer</span></span>
+                <span className={`text-[12px] truncate ${hasActivity ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'}`}>{hasActivity ? (hrs > 0 ? `${hrs} hr ${String(mins).padStart(2,'0')} min` : `${mins} min`) : 'No activity yet'}</span>
+              </div>
+              <div className="flex-1 min-h-2.5" aria-hidden="true" />
+              <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500 bg-[var(--accent)]" style={{ width: `${workoutGoalMin ? Math.min(100, (workoutMinToday / workoutGoalMin) * 100) : 0}%` }} />
               </div>
             </div>
             {nutrientActive('PROTEIN') && <MiniCard title="Protein" icon="egg_alt" value={hasMeals ? `${meals.protein}g` : '—'} sub={hasMeals ? `Goal: ${nutrientTarget('PROTEIN', goal?.proteinG ?? 50)} g` : 'Log your first meal'} progress={nutrientTarget('PROTEIN', goal?.proteinG ?? 50) ? (meals.protein/nutrientTarget('PROTEIN', goal?.proteinG ?? 50))*100 : 0} onClick={() => navigate('/dashboard/meal-tracker')} />}
@@ -486,7 +490,7 @@ const Dashboard = () => {
           </div>
 
           {/* extra row: recovery + goal as small cards like MFP bottom spacing */}
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 mt-3">
             <button onClick={() => setCheckInOpen(true)} className="text-left glass-card border border-black/[0.06] dark:border-white/[0.06] rounded-[14px] p-4">
               <p className="text-[14px] font-bold">Recovery</p>
               <p className="text-[13px] text-[var(--text-muted)] mt-1">{checkin ? `${checkin.sleep_hours}h • ${checkin.sleep_quality}` : 'No check-in'}</p>

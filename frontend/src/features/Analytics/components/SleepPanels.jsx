@@ -104,7 +104,7 @@ function SleepScatterChart({ scatterData, sleepHours, sleepQuality }) {
         </div>
         <ScatterLegend />
       </div>
-      <div className="h-47.5 xs:h-55 sm:h-62.5 md:h-70 lg:h-75">
+      <div className="h-[190px] sm:h-[250px] md:h-[280px] lg:h-[300px]">
         <Scatter data={chartDataset} options={chartOptions} />
       </div>
     </div>

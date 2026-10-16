@@ -67,18 +67,18 @@ const StatsPanel = ({ metrics, splits, formatTime, isDesktop, bare = false }) =>
       aria-label="Expand run stats"
       className="w-full min-h-[56px] glass-card border border-[var(--border-light)] rounded-2xl px-4 py-2.5 flex items-center justify-between"
     >
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="flex-shrink-0 text-left">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="flex-shrink-0 min-w-0 text-left">
           <p className="text-[9px] font-semibold text-[var(--text-muted)]">Distance</p>
           <p className="text-lg font-bold tabular-nums text-[var(--text-primary)] whitespace-nowrap leading-tight">
             {metrics.distance.toFixed(2)} <span className="text-[10px] font-semibold text-[var(--text-muted)]">km</span>
           </p>
         </div>
-        <div className="flex-shrink-0 text-left">
+        <div className="flex-shrink-0 min-w-0 text-left">
           <p className="text-[9px] font-semibold text-[var(--text-muted)]">Time</p>
           <p className="text-lg font-bold tabular-nums text-[var(--text-primary)] whitespace-nowrap leading-tight">{formatTime(metrics.time)}</p>
         </div>
-        <div className="flex-shrink-0 text-left">
+        <div className="hidden min-[380px]:block flex-shrink-0 min-w-0 text-left">
           <p className="text-[9px] font-semibold text-[var(--text-muted)]">Pace</p>
           <p className="text-lg font-bold tabular-nums text-[var(--accent-dark)] dark:text-[var(--accent)] whitespace-nowrap leading-tight">{metrics.pace}</p>
         </div>

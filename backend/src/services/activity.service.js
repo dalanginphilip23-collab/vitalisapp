@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { AppError } = require("../utils/errors");
 
 const ROUTE_MAX_CHARS = 64000;
 const ROUTE_MAX_POINTS = 2000;
@@ -45,6 +46,62 @@ function isPlausibleActivity(durationSec, distanceKm) {
   return dist / (d / 3600) <= 50;
 }
 
+// ─── Route-recomputed distance (server never trusts claimed distance) ───────
+// Haversine in km. Accepts [lat, lng] arrays (our client path format) or
+// { lat, lng } / { latitude, longitude } objects. Invalid points contribute 0.
+function haversineKm(a, b) {
+  const norm = (p) => {
+    if (Array.isArray(p)) return [Number(p[0]), Number(p[1])];
+    if (p && typeof p === "object") {
+      return [Number(p.lat ?? p.latitude), Number(p.lng ?? p.lon ?? p.long ?? p.longitude)];
+    }
+    return [NaN, NaN];
+  };
+  const [lat1, lon1] = norm(a);
+  const [lat2, lon2] = norm(b);
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return 0;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+// Total polyline length in km. Accepts an array or JSON string; garbage → null
+// (unverifiable, not a verdict). Checked on the FULL route before downsampling.
+function routeDistanceKm(route) {
+  let pts = route;
+  if (typeof pts === "string") {
+    try {
+      pts = JSON.parse(pts);
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(pts) || pts.length < 2) return null;
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += haversineKm(pts[i - 1], pts[i]);
+  return total;
+}
+
+// Claimed-vs-route verdict. Only the impossible direction is rejected:
+// claimed distance materially EXCEEDING what the path supports (tampered or
+// glitched input). The other direction (path longer than claimed) is legitimate
+// — client-side teleport/jitter filtering intentionally drops segments.
+// Returns { ok, routeKm } — routeKm null means unverifiable (no usable route).
+function distanceMatchesRoute(distanceKm, route, tolerance = 0.25) {
+  const claimed = Number(distanceKm);
+  if (!Number.isFinite(claimed) || claimed <= 0) return { ok: true, routeKm: null };
+  const routeKm = routeDistanceKm(route);
+  if (routeKm == null || routeKm < 0.02) return { ok: true, routeKm };
+  if (claimed > routeKm * (1 + tolerance) + 0.02) {
+    return { ok: false, routeKm };
+  }
+  return { ok: true, routeKm };
+}
+
 async function saveActivity(userId, params) {
   const p =
     typeof params === "object" && params !== null && !Array.isArray(params)
@@ -55,6 +112,16 @@ async function saveActivity(userId, params) {
   const distance = Math.max(0, Number(p.distance ?? 0) || 0);
   const pace = p.pace != null ? String(p.pace).slice(0, 20) : null;
   const calories = Math.max(0, parseInt(p.calories ?? 0) || 0);
+  // Claimed distance must be supportable by the uploaded path (checked on the
+  // full route, before downsampling). Tampered/glitched payloads 400 here.
+  const match = distanceMatchesRoute(distance, p.route);
+  if (!match.ok) {
+    throw new AppError(
+      `Claimed distance (${distance} km) exceeds the uploaded route (${match.routeKm.toFixed(2)} km). Re-record or re-upload the run.`,
+      400,
+      "ROUTE_MISMATCH"
+    );
+  }
   const route = downsampleRoute(p.route);
   const isGps =
     p.is_gps == null
@@ -175,6 +242,9 @@ module.exports = {
   ROUTE_MAX_POINTS,
   downsampleRoute,
   isPlausibleActivity,
+  haversineKm,
+  routeDistanceKm,
+  distanceMatchesRoute,
   saveActivity,
   getStats,
   getDetail,

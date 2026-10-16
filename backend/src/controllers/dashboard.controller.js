@@ -2,10 +2,14 @@
 const db = require('../config/db');
 const log = require('../utils/logger');
 const { calcReadiness } = require('../utils/readiness');
-async function getdashboardUserId(req,res,next){
-  try{
-        const { userId } = req.params;
-        try {
+const { validId } = require('../utils/ids');
+
+async function getdashboardUserId(req, res, next) {
+  // requireOwner already enforced identity; validate shape here so malformed
+  // ids return 400 (client bug) instead of hitting SQL or aliasing to Guest.
+  const userId = validId(req.params.userId);
+  if (!userId) return res.status(400).json({ error: 'Invalid user id' });
+  try {
             // Independent selects run concurrently — ~3x faster than sequential awaits.
             const [statsRes, userRes, sleepRes, waterRes] = await Promise.all([
               db.execute(
@@ -70,32 +74,28 @@ async function getdashboardUserId(req,res,next){
                 sleep_trend: sleepData || [],
                 hrv_data: sleepData || [] // deprecated alias, use sleep_trend
             });
-    
-        } catch (e) {
-            log.error('DASHBOARD ERROR:', e.message);
-            next(e);
-        }
-  }catch(e){ next(e); }
+  } catch (e) {
+    log.error('DASHBOARD ERROR:', e);
+    next(e);
+  }
 }
 
-async function getsearch(req,res,next){
-  try{
-        const raw = req.query.q;
-        if (!raw) return res.json([]);
-        const q = String(raw).trim().slice(0, 50);
-        if (!q) return res.json([]);
-        try {
-            const escaped = String(q).replace(/[\\%_]/g, (c) => `\\${c}`);
-            const [results] = await db.execute(
-                "SELECT u.name, COALESCE(p.avatar_url, u.avatar_url) AS avatar_url FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.name LIKE ? ESCAPE '\\\\' LIMIT 5",
-                [`%${escaped}%`]
-            );
-            res.json(results);
-        } catch (e) {
-            log.error('SEARCH ERROR:', e.message);
-            next(e);
-        }
-  }catch(e){ next(e); }
+async function getsearch(req, res, next) {
+  try {
+    const raw = req.query.q;
+    if (!raw) return res.json([]);
+    const q = String(raw).trim().slice(0, 50);
+    if (!q) return res.json([]);
+    const escaped = String(q).replace(/[\\%_]/g, (c) => `\\${c}`);
+    const [results] = await db.execute(
+      "SELECT u.name, COALESCE(p.avatar_url, u.avatar_url) AS avatar_url FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.name LIKE ? ESCAPE '\\\\' LIMIT 5",
+      [`%${escaped}%`]
+    );
+    res.json(results);
+  } catch (e) {
+    log.error('SEARCH ERROR:', e);
+    next(e);
+  }
 }
 
 module.exports = { getdashboardUserId, getsearch };
