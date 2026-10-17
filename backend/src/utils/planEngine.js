@@ -8,8 +8,6 @@ const ACTIVITY_FACTORS = {
   HIGHLY_ACTIVE: 1.9,
 };
 
-/** Mifflin-St Jeor based plan engine: BMI/BMR/TDEE + macro split. Pure, no I/O. */
-
 const PROTEIN_PER_KG = {
   LOSE_WEIGHT: 2.0,
   MAINTAIN_WEIGHT: 1.6,
@@ -69,7 +67,13 @@ function generatePlan(input = {}) {
     const p = (pace || '').toUpperCase();
     switch (goalType) {
       case 'LOSE_WEIGHT':
-        dailyKcal = tdee - (p === 'GRADUAL' ? KCAL.LOSE_GRADUAL : p === 'FASTER' ? KCAL.LOSE_FASTER : KCAL.LOSE_DEFAULT);
+        dailyKcal =
+          tdee -
+          (p === 'GRADUAL'
+            ? KCAL.LOSE_GRADUAL
+            : p === 'FASTER'
+              ? KCAL.LOSE_FASTER
+              : KCAL.LOSE_DEFAULT);
         break;
       case 'GAIN_WEIGHT':
         dailyKcal = tdee + (p === 'MODERATE' ? KCAL.GAIN_MODERATE : KCAL.GAIN_DEFAULT);
@@ -93,7 +97,10 @@ function generatePlan(input = {}) {
   if (dailyKcal && weightKg) {
     proteinG = Math.round((PROTEIN_PER_KG[goalType] || 1.6) * Number(weightKg));
     fatG = Math.round((dailyKcal * KCAL.FAT_RATIO) / KCAL.KCAL_PER_G_FAT);
-    carbsG = Math.max(0, Math.round((dailyKcal - proteinG * 4 - fatG * 9) / KCAL.KCAL_PER_G_PROTEIN_CARB));
+    carbsG = Math.max(
+      0,
+      Math.round((dailyKcal - proteinG * 4 - fatG * 9) / KCAL.KCAL_PER_G_PROTEIN_CARB)
+    );
   }
 
   return {

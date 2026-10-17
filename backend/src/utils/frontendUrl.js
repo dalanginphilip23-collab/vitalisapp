@@ -1,5 +1,3 @@
-// Frontend URL resolution for auth emails (verify/reset links).
-// Resolved per call so tunnel URLs take effect without a code change.
 const log = require('./logger');
 
 function resolveFrontendUrl() {

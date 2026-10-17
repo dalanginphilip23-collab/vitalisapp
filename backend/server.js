@@ -8,9 +8,6 @@ const PORT = env.port || process.env.PORT || 3000;
 
 const app = createApp();
 const server = http.createServer(app);
-// Socket.IO cors semantics differ slightly from Express: wrap the shared
-// origin fn so missing origin (same-origin/SSE/curl) is allowed and rejections
-// are logged in dev. Verified parity for localhost:5173 -> 3000 local dev.
 const socketOrigin = (origin, cb) => {
   if (!origin) return cb(null, true);
   corsOptions.origin(origin, (err, ok) => {
