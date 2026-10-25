@@ -38,6 +38,8 @@ const registerSchema = z.object({
   name: z.string().trim().min(2, "Name too short").max(100),
   email: z.string().trim().toLowerCase().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters").max(128),
+  // Module 1 — explicit consent flag must survive schema validation.
+  agreed: z.boolean().optional().default(false),
 });
 
 const loginSchema = z.object({

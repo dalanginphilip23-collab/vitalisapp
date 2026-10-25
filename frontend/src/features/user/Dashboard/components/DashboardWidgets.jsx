@@ -463,7 +463,7 @@ export const RecoveryCard = ({ readiness = null, note = '', rows = [], hasCheckI
   );
 };
 
-export const MotivationCard = ({ streak = 0, onOpenWorkouts = undefined }) => (
+export const MotivationCard = ({ onOpenWorkouts = undefined }) => (
   <div className="vd-motivation">
     <div className="vd-motivation-bg">
       <img src="/hero-gym-card-mobile.webp" alt="" loading="lazy" decoding="async" />
@@ -471,9 +471,7 @@ export const MotivationCard = ({ streak = 0, onOpenWorkouts = undefined }) => (
     <span className="vd-motivation-kicker"><Icon name="bolt" style={{ fontSize: 13 }} /> Motivation</span>
     <h2 className="vd-motivation-title">Keep pushing your limits.</h2>
     <p className="vd-motivation-sub">
-      {streak > 0
-        ? `${streak}-day streak alive — one session today keeps it going.`
-        : 'One session today starts your next streak.'}
+      A focused session today is how progress compounds.
     </p>
     <button type="button" className="vd-btn vd-motivation-btn" onClick={onOpenWorkouts}>
       <Icon name="fitness_center" /> Start a workout

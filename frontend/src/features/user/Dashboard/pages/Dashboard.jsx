@@ -31,6 +31,7 @@ import {
   AiCoachCard,
 } from '../components/DashboardWidgets.jsx';
 import WeekCalendarCard from '../components/WeekCalendarCard.jsx';
+import StreakJourney from '../components/StreakJourney.jsx';
 import { clampPct, minutesFromSeconds, workoutLabel, isToday } from '../lib/dashboardFormat.js';
 import '../dashboard.css';
 
@@ -110,7 +111,7 @@ const Dashboard = () => {
   const [calendarKey, setCalendarKey] = useState(0);
   const bumpCalendar = () => setCalendarKey((k) => k + 1);
   const [nutrientGoals, setNutrientGoals] = useState([]);
-  const { data, biometrics, workouts, dashboardError, setData, setBiometrics, setAuthOverride, mergeData, refresh: refreshDashboard, generateFitnessInsight } = useDashboardData(USER_ID);
+  const { data, biometrics, workouts, dashboardError, loaded, setData, setBiometrics, setAuthOverride, mergeData, refresh: refreshDashboard, generateFitnessInsight } = useDashboardData(USER_ID);
   const { goal, currentWeightKg, progressPct, refresh: refreshGoal } = useActiveGoal(USER_ID);
   const { meals, refreshMeals } = useTodayMeals(USER_ID);
   useEffect(() => { if (!user) return; setAuthOverride(user.name || null, user.avatar || null); }, [user, setAuthOverride]);
@@ -273,17 +274,11 @@ const Dashboard = () => {
   const weeklyTotal = weeklyDays.reduce((s, d) => s + d.minutes, 0);
   const weeklySessions = weeklyDays.reduce((s, d) => s + d.sessions, 0);
 
-  const streak = useMemo(() => {
-    const daySet = new Set(activeLogs.map((l) => new Date(l.start_time).toDateString()));
-    const cursor = new Date();
-    if (!daySet.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
-    let n = 0;
-    while (daySet.has(cursor.toDateString())) {
-      n += 1;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-    return n;
-  }, [activeLogs]);
+  // Engagement streak — one server-computed source of truth (workouts, meals
+  // AND check-ins all keep it alive). No client-side approximation: if the
+  // payload is missing, the section shows an honest unavailable state.
+  const streak = data?.streak || null;
+  const todayMealCount = Number(meals.count) || 0;
 
   // ── Goal / macro derivations ──────────────────────────────────────────
   const macroRows = useMemo(() => {
@@ -348,13 +343,11 @@ const Dashboard = () => {
     { label: isPastView ? 'Selected day' : 'Today', value: `${workoutMinToday}/${workoutGoalMin} min` },
     { label: 'Sessions', value: `${todayWorkouts.length}` },
     { label: 'This week', value: `${weeklyTotal} min` },
-    { label: 'Streak', value: `${streak} ${streak === 1 ? 'day' : 'days'}` },
   ];
 
   const thisWeekRows = [
     { icon: 'calendar_month', label: 'Workouts logged', value: `${weeklySessions}` },
     { icon: 'schedule', label: 'Active minutes', value: `${weeklyTotal} min` },
-    { icon: 'local_fire_department', label: 'Day streak', value: `${streak} ${streak === 1 ? 'day' : 'days'}` },
   ];
 
   const goalValueText = goal
@@ -512,6 +505,22 @@ const Dashboard = () => {
               readOnly={isPastView}
             />
 
+            <StreakJourney
+              userId={USER_ID}
+              streak={streak}
+              loading={!loaded}
+              error={dashboardError}
+              readOnly={isPastView}
+              workoutCount={isPastView ? 0 : todayWorkouts.length}
+              mealCount={isPastView ? 0 : todayMealCount}
+              hasCheckin={isPastView ? false : Boolean(checkin)}
+              onStartWorkout={() => navigate('/dashboard/workouts')}
+              onLogMeal={() => navigate('/dashboard/meal-tracker?manual=1')}
+              onViewMeals={() => navigate('/dashboard/meal-tracker')}
+              onCheckIn={() => setCheckInOpen(true)}
+              onRetry={refreshAll}
+            />
+
             <div className="vd-weekly-col">
               <WeekCalendarCard
                 refreshKey={calendarKey}
@@ -625,7 +634,7 @@ const Dashboard = () => {
                   onCheckIn={() => setCheckInOpen(true)}
                   readOnly={isPastView}
                 />
-                <MotivationCard streak={streak} onOpenWorkouts={() => navigate('/dashboard/workouts')} />
+                <MotivationCard onOpenWorkouts={() => navigate('/dashboard/workouts')} />
                 <ThisWeekCard
                   rows={thisWeekRows}
                   goal={goal}

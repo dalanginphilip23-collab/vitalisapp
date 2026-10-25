@@ -8,6 +8,7 @@ export const useDashboardData = (USER_ID) => {
   const [biometrics, setBiometrics] = useState([]);
   const [workouts, setWorkouts]     = useState([]);
   const [dashboardError, setDashboardError] = useState(null);
+  const [loaded, setLoaded]         = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
@@ -96,6 +97,7 @@ export const useDashboardData = (USER_ID) => {
 
         if (result.insights) setInsights(result.insights);
         setDashboardError(null);
+        setLoaded(true);
 
       } catch (error) {
         if (controllers.size === 0) return; // unmounted
@@ -115,6 +117,7 @@ export const useDashboardData = (USER_ID) => {
           hint.cause = error;
         }
         setDashboardError(hint);
+        setLoaded(true);
         if (import.meta.env.DEV) {
           console.error('Fetch Error:', error);
         }
@@ -159,6 +162,7 @@ export const useDashboardData = (USER_ID) => {
     biometrics,
     workouts,
     dashboardError,
+    loaded,
     setData,
     setInsights,
     setBiometrics,

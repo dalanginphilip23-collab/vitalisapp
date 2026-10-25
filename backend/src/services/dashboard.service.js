@@ -2,10 +2,11 @@
 const db = require('../config/db');
 const { AppError } = require('../utils/errors');
 const { calcReadiness } = require('../utils/readiness');
+const { getStreakSummary } = require('./streaks.service');
 
 async function getDashboard(userId) {
   // Independent selects run concurrently — ~3x faster than sequential awaits.
-  const [statsRes, userRes, sleepRes, waterRes] = await Promise.all([
+  const [statsRes, userRes, sleepRes, waterRes, streakRes] = await Promise.all([
     db.execute(
       `SELECT calories_burned, steps, workout_duration_mins
        FROM daily_stats 
@@ -30,6 +31,10 @@ async function getDashboard(userId) {
        FROM sleep_logs WHERE user_id = ? AND recorded_at >= CURDATE() AND recorded_at < CURDATE() + INTERVAL 1 DAY`,
       [userId]
     ),
+    // Engagement streak (workouts ∪ meals ∪ check-ins) rides the dashboard
+    // payload — the Dashboard hook already fetches this endpoint, so the
+    // streak section costs zero extra round-trips. Never fails the dashboard.
+    getStreakSummary(userId).catch(() => null),
   ]);
   const [stats] = statsRes;
   const [user] = userRes;
@@ -66,6 +71,7 @@ async function getDashboard(userId) {
     profile:  user[0]   || { name: "Guest" },
     checkin:  checkins[0] || null,
     sleep_trend: sleepData || [],
+    streak:   streakRes || null, // { current, longest, activeToday, ... } | null
     hrv_data: sleepData || [] // deprecated alias, use sleep_trend
   };
 }
