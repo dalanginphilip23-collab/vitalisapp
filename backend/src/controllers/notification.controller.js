@@ -1,5 +1,6 @@
-const db = require('../config/db');
-const { requireOwner } = require('../utils/owner');
+// Notifications — thin controller. DB access lives in
+// services/notification.service.js; SSE fan-out stays here.
+const notificationService = require('../services/notification.service');
 // One entry per tab/device: a user may stream from phone + desktop at once.
 const clients = new Map(); // userId -> Set<res>
 
@@ -80,14 +81,10 @@ async function getUserId(req, res, next) {
     const userId = Number(req.params.userId);
     if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Invalid user id' });
     if (userId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
-    const [[result]] = await db.execute('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE', [userId]);
-    const [notifications] = await db.execute('SELECT id, user_id, message, type, category, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 30', [userId]);
-    res.json({ count: result.count, notifications });
+    const data = await notificationService.getNotifications(userId);
+    res.json(data);
   } catch (err) { next(err); }
 }
-
-const CATEGORIES = ['TRAINING', 'NUTRITION', 'RECOVERY', 'GOAL', 'SYSTEM'];
-const TYPES = ['info', 'success', 'warning', 'error'];
 
 async function post(req, res, next) {
   try {
@@ -102,23 +99,7 @@ async function post(req, res, next) {
     if (/\b0 reps?\b/i.test(text) && !/goal|target/i.test(text)) {
       return res.status(422).json({ error: 'Empty workout — notification suppressed' });
     }
-    const cat = CATEGORIES.includes(String(category).toUpperCase())
-      ? String(category).toUpperCase() : 'SYSTEM';
-    const notifType = TYPES.includes(String(type)) ? String(type) : 'info';
-    try {
-      await db.execute(
-        'INSERT INTO notifications (user_id, message, type, category) VALUES (?, ?, ?, ?)',
-        [user_id, text, notifType, cat]
-      );
-    } catch (err) {
-      // Pre-015 databases lack the category column — fall back gracefully
-      if (err.code === 'ER_BAD_FIELD_ERROR') {
-        await db.execute(
-          'INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)',
-          [user_id, text, notifType]
-        );
-      } else throw err;
-    }
+    const { category: cat } = await notificationService.createNotification(user_id, text, type, category);
     const clientKey = String(user_id);
     broadcast(clientKey, { message: text, type, category: cat });
     res.json({ success: true });
@@ -129,8 +110,8 @@ async function putIdRead(req, res, next) {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid notification id' });
-    const [result] = await db.execute('UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?', [id, req.user.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Notification not found' });
+    const updated = await notificationService.markRead(id, req.user.id);
+    if (!updated) return res.status(404).json({ error: 'Notification not found' });
     res.json({ success: true });
   } catch (err) { next(err); }
 }
@@ -140,11 +121,31 @@ async function putreadAllUserId(req, res, next) {
     const userId = Number(req.params.userId);
     if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Invalid user id' });
     if (userId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
-    await db.execute('UPDATE notifications SET is_read = TRUE WHERE user_id = ?', [userId]);
+    await notificationService.markAllRead(userId);
     res.json({ success: true });
   } catch (err) { next(err); }
 }
 
-module.exports = { stream, getUserId, post, putIdRead, putreadAllUserId };
+// Cross-module helper: persist a notification AND push it live over SSE in one
+// call. Used by other domains (messenger/friends, plans, …) so they don't have
+// to know about the SSE client registry. Best-effort — never throws.
+async function notifyUser(userId, { message, type = 'info', category = 'SYSTEM' } = {}) {
+  const text = String(message || '').trim();
+  if (!text) return false;
+  try {
+    const { category: cat } = await notificationService.createNotification(
+      userId, text, type, category
+    );
+    broadcast(String(userId), { message: text, type, category: cat });
+    return true;
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[notify] failed:', err.message);
+    }
+    return false;
+  }
+}
+
+module.exports = { stream, getUserId, post, putIdRead, putreadAllUserId, notifyUser };
 module.exports.clients = clients;
 module.exports.broadcast = broadcast;

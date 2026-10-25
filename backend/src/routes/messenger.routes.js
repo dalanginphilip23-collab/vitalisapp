@@ -10,5 +10,10 @@ router.get('/messages/:userId/:contactId', verifyUser, requireOwner('userId'), c
 router.post('/messages', verifyUser, messageLimiter(), controller.postmessages);
 router.get('/users/search', verifyUser, controller.getusersSearch);
 router.post('/friends/add', verifyUser, writeLimiter(), controller.postfriendsAdd);
+router.post('/friends/request', verifyUser, writeLimiter(), controller.postfriendsRequest);
+router.get('/friends/requests/:userId', verifyUser, requireOwner('userId'), controller.getfriendsRequests);
+router.post('/friends/accept', verifyUser, writeLimiter(), controller.postfriendsAccept);
+router.post('/friends/decline', verifyUser, writeLimiter(), controller.postfriendsDecline);
+router.get('/friends/status', verifyUser, controller.getfriendsStatus);
 
 module.exports=router;

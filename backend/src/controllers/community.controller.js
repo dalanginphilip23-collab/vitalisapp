@@ -1,4 +1,7 @@
-const db = require('../config/db');
+// Community controller — thin HTTP layer. Validation, ownership checks and
+// pagination bounds live here; all SQL lives in services/community.service.js,
+// which owns the community_posts / community_likes / community_comments tables.
+const communityService = require('../services/community.service');
 const { z } = require('zod');
 const { validId } = require('../utils/ids');
 
@@ -26,31 +29,8 @@ async function list(req, res, next) {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit ?? 20) || 20));
     const offset = Math.max(0, Number(req.query.offset ?? 0) || 0);
     const me = req.user.id;
-    // NOTE: db.query (not execute) — mysql2 server-side prepares reject
-    // placeholders in LIMIT/OFFSET on some MySQL versions.
-    // Optimized: single GROUP BY pass instead of 2x correlated COUNT per row.
-    const [rows] = await db.query(
-      `SELECT p.id, p.user_id, p.author_name, p.text, p.tag, p.created_at,
-              COUNT(DISTINCT l.id) AS likes,
-              COUNT(DISTINCT c.id) AS comments,
-              MAX(CASE WHEN l2.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me
-       FROM community_posts p
-       LEFT JOIN community_likes l ON l.post_id = p.id
-       LEFT JOIN community_comments c ON c.post_id = p.id
-       LEFT JOIN community_likes l2 ON l2.post_id = p.id AND l2.user_id = ?
-       GROUP BY p.id, p.user_id, p.author_name, p.text, p.tag, p.created_at
-       ORDER BY p.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [me, me, Number(limit), Number(offset)]
-    );
-    const [[{ total }]] = await db.execute('SELECT COUNT(*) AS total FROM community_posts');
-    const posts = rows.map((r) => ({
-      ...r,
-      likes: Number(r.likes),
-      comments: Number(r.comments),
-      liked_by_me: Number(r.liked_by_me) === 1,
-    }));
-    res.json({ posts, total: Number(total), limit, offset });
+    const { posts, total } = await communityService.listPosts(me, limit, offset);
+    res.json({ posts, total, limit, offset });
   } catch (e) { next(e); }
 }
 
@@ -58,17 +38,8 @@ async function list(req, res, next) {
 async function create(req, res, next) {
   try {
     const { text, tag } = req.body;
-    const [userRows] = await db.execute('SELECT name FROM users WHERE id = ?', [req.user.id]);
-    const author = userRows[0]?.name?.split(' ')[0] || 'You';
-    const [result] = await db.execute(
-      'INSERT INTO community_posts (user_id, author_name, text, tag) VALUES (?,?,?,?)',
-      [req.user.id, author, text, tag ?? 'General']
-    );
-    const [rows] = await db.execute(
-      'SELECT id, user_id, author_name, text, tag, created_at FROM community_posts WHERE id = ?',
-      [result.insertId]
-    );
-    res.status(201).json({ success: true, post: { ...rows[0], likes: 0, comments: 0, liked_by_me: false } });
+    const post = await communityService.createPost(req.user.id, text, tag);
+    res.status(201).json({ success: true, post: { ...post, likes: 0, comments: 0, liked_by_me: false } });
   } catch (e) { next(e); }
 }
 
@@ -77,11 +48,9 @@ async function toggleLike(req, res, next) {
   try {
     const postId = validId(req.params.id);
     if (!postId) return res.status(400).json({ error: 'Invalid post id' });
-    const [exists] = await db.execute('SELECT id FROM community_posts WHERE id = ?', [postId]);
-    if (!exists.length) return res.status(404).json({ error: 'Post not found' });
-    await db.execute('INSERT IGNORE INTO community_likes (post_id, user_id) VALUES (?,?)', [postId, req.user.id]);
-    const [[{ likes }]] = await db.execute('SELECT COUNT(*) AS likes FROM community_likes WHERE post_id=?', [postId]);
-    res.json({ success: true, liked: true, likes: Number(likes) });
+    const result = await communityService.likePost(postId, req.user.id);
+    if (!result) return res.status(404).json({ error: 'Post not found' });
+    res.json({ success: true, liked: true, likes: result.likes });
   } catch (e) { next(e); }
 }
 
@@ -90,11 +59,9 @@ async function unlike(req, res, next) {
   try {
     const postId = validId(req.params.id);
     if (!postId) return res.status(400).json({ error: 'Invalid post id' });
-    const [exists] = await db.execute('SELECT id FROM community_posts WHERE id = ?', [postId]);
-    if (!exists.length) return res.status(404).json({ error: 'Post not found' });
-    await db.execute('DELETE FROM community_likes WHERE post_id=? AND user_id=?', [postId, req.user.id]);
-    const [[{ likes }]] = await db.execute('SELECT COUNT(*) AS likes FROM community_likes WHERE post_id=?', [postId]);
-    res.json({ success: true, liked: false, likes: Number(likes) });
+    const result = await communityService.unlikePost(postId, req.user.id);
+    if (!result) return res.status(404).json({ error: 'Post not found' });
+    res.json({ success: true, liked: false, likes: result.likes });
   } catch (e) { next(e); }
 }
 
@@ -105,13 +72,9 @@ async function listComments(req, res, next) {
     if (!postId) return res.status(400).json({ error: 'Invalid post id' });
     const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 30) || 30));
     const offset = Math.max(0, Number(req.query.offset ?? 0) || 0);
-    const [exists] = await db.execute('SELECT id FROM community_posts WHERE id = ?', [postId]);
-    if (!exists.length) return res.status(404).json({ error: 'Post not found' });
-    const [rows] = await db.query(
-      'SELECT id, user_id, author_name, text, created_at FROM community_comments WHERE post_id=? ORDER BY created_at ASC LIMIT ? OFFSET ?',
-      [postId, Number(limit), Number(offset)]
-    );
-    res.json({ comments: rows, limit, offset });
+    const comments = await communityService.listComments(postId, limit, offset);
+    if (comments === null) return res.status(404).json({ error: 'Post not found' });
+    res.json({ comments, limit, offset });
   } catch (e) { next(e); }
 }
 
@@ -121,16 +84,9 @@ async function addComment(req, res, next) {
     const postId = validId(req.params.id);
     if (!postId) return res.status(400).json({ error: 'Invalid post id' });
     const { text } = req.body;
-    const [exists] = await db.execute('SELECT id FROM community_posts WHERE id=?', [postId]);
-    if (!exists.length) return res.status(404).json({ error: 'Post not found' });
-    const [userRows] = await db.execute('SELECT name FROM users WHERE id=?', [req.user.id]);
-    const author = userRows[0]?.name?.split(' ')[0] || 'You';
-    const [result] = await db.execute(
-      'INSERT INTO community_comments (post_id, user_id, author_name, text) VALUES (?,?,?,?)',
-      [postId, req.user.id, author, text]
-    );
-    const [rows] = await db.execute('SELECT id, user_id, author_name, text, created_at FROM community_comments WHERE id=?', [result.insertId]);
-    res.status(201).json({ success: true, comment: rows[0] });
+    const comment = await communityService.addComment(postId, req.user.id, text);
+    if (!comment) return res.status(404).json({ error: 'Post not found' });
+    res.status(201).json({ success: true, comment });
   } catch (e) { next(e); }
 }
 
@@ -139,10 +95,9 @@ async function remove(req, res, next) {
   try {
     const postId = validId(req.params.id);
     if (!postId) return res.status(400).json({ error: 'Invalid post id' });
-    const [rows] = await db.execute('SELECT user_id FROM community_posts WHERE id=?', [postId]);
-    if (!rows.length) return res.status(404).json({ error: 'Post not found' });
-    if (Number(rows[0].user_id) !== Number(req.user.id)) return res.status(403).json({ error: 'Forbidden' });
-    await db.execute('DELETE FROM community_posts WHERE id=?', [postId]);
+    const result = await communityService.deletePost(postId, req.user.id);
+    if (!result.found) return res.status(404).json({ error: 'Post not found' });
+    if (result.forbidden) return res.status(403).json({ error: 'Forbidden' });
     res.json({ success: true });
   } catch (e) { next(e); }
 }

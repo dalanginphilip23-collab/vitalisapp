@@ -43,8 +43,24 @@ export const PublicRoute = ({ children }) => {
   if (loading) return <GuardFallback />;
   // Redirect only on proven session or fresh cache (avoids dashboard↔login bounce).
   if (user && (sessionValid !== false || isCacheFresh())) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
   }
 
   return children;
+};
+
+// Member-only wrapper: an admin typing any /dashboard/* URL straight into the
+// address bar is redirected to their own console. Members pass through to
+// ProtectedRoute (verification + onboarding checks still apply).
+export const MemberRoute = ({ children, requireOnboarding = true }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <GuardFallback />;
+  if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+
+  return (
+    <ProtectedRoute requireOnboarding={requireOnboarding}>
+      {children}
+    </ProtectedRoute>
+  );
 };

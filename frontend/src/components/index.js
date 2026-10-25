@@ -1,8 +1,10 @@
 export { default as Icon } from './Icon.jsx';
 export { default as Sidebar } from './Sidebar.jsx';
-export { default as SidebarAnalytics } from './SidebarAnalytics.jsx';
 export { default as Topbar } from './Topbar.jsx';
 export { default as BottomNav } from './BottomNav.jsx';
+export { default as AppShell } from './AppShell.jsx';
+export { default as PageHeader } from './app/PageHeader.jsx';
+export { AppQuickJump, AppMobileTitle, AppTopbarLeft, AppTextLink } from './app/AppNav.jsx';
 export { default as LogActivityModal } from './LogActivityModal.jsx';
 export { default as FAB } from './FAB.jsx';
 // Previously deep-import only — re-exported for consistency (no logic change).

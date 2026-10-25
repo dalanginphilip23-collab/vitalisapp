@@ -50,5 +50,21 @@ router.post('/send-verification', sendVerificationLimiter, controller.postsendVe
 router.get('/verify-email', verifyEmailLimiter, controller.getverifyEmail);
 router.patch('/change-email', changeEmailLimiter, validate(controller.changeEmailSchema), controller.patchchangeEmail);
 router.post('/complete-onboarding', meLimiter(), verifyUser, controller.postcompleteOnboarding);
+// Module 1 — governance: soft deactivation (password-confirmed) + credential-
+// gated reactivation. Deactivate is pricier (bcrypt + side effects) than reads.
+const deactivateLimiter = makeLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  message: 'Too many deactivate attempts. Try again later.',
+});
+const reactivateLimiter = makeLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  message: 'Too many reactivate attempts. Try again later.',
+});
+router.post('/deactivate', deactivateLimiter, verifyUser, controller.postDeactivate);
+router.post('/reactivate', reactivateLimiter, controller.postReactivate);
+// Read-only: current allergy list for Profile > Personalization.
+router.get('/allergies', meLimiter(), verifyUser, controller.getallergies);
 
 module.exports=router;

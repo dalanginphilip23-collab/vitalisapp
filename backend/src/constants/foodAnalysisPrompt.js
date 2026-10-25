@@ -16,7 +16,8 @@ List EVERY distinct food visible in this photo as its own item, then output a si
       saturated_fat       – number: grams of saturated fat (1 decimal, e.g. 4.2),
       trans_fat           – number: grams of trans fat (1 decimal),
       polyunsaturated_fat – number: grams of polyunsaturated fat (1 decimal),
-      monounsaturated_fat – number: grams of monounsaturated fat (1 decimal)
+      monounsaturated_fat – number: grams of monounsaturated fat (1 decimal),
+      possible_allergens  – array of strings: allergens likely present in THIS item, using ONLY these canonical names: peanut, tree nut, milk, egg, gluten, soy, fish, shellfish, sesame. Use [] when none apply or you cannot tell from the image — never invent other names.
     }
   ],
   "suggestion" – string: one practical health tip about this meal (≤ 15 words)
@@ -232,5 +233,5 @@ FAT BREAKDOWN RULES
 11. If unsure, split remaining fat after saturated/trans as 40% mono, 35% poly, remainder.
 
 OUTPUT FORMAT (raw JSON only — no markdown, no prose, no code fences):
-{"items":[{"food_name":"...","serving":"...","calories":0,"protein":0,"carbs":0,"fat":0,"saturated_fat":0,"trans_fat":0,"polyunsaturated_fat":0,"monounsaturated_fat":0}],"suggestion":"..."}`;
+{"items":[{"food_name":"...","serving":"...","calories":0,"protein":0,"carbs":0,"fat":0,"saturated_fat":0,"trans_fat":0,"polyunsaturated_fat":0,"monounsaturated_fat":0,"possible_allergens":[]}],"suggestion":"..."}`;
 module.exports = { FOOD_ANALYSIS_PROMPT };

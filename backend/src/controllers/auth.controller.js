@@ -1,692 +1,523 @@
-const db = require('../config/db');
-const bcrypt     = require('bcryptjs');
-const jwt        = require('jsonwebtoken');
-const rateLimit  = require('express-rate-limit');
-const { z }      = require('zod');
-const UAParser   = require('ua-parser-js');
-const { OAuth2Client } = require('google-auth-library');
-const { COOKIE_NAME, getCookieOptions, getClearCookieOptions } = require('../utils/cookies');
-const crypto = require('crypto');
-const { sendVerificationEmail } = require('../config/mailer');
+// Auth — thin controller. Logic + DB live in services/auth.service.js.
+const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
+const { z } = require("zod");
+const { COOKIE_NAME, getCookieOptions, getClearCookieOptions } = require("../utils/cookies");
+const service = require("../services/auth.service");
+const emailService = require("../services/email.service");
+const notificationController = require("./notification.controller");
 
-function resolveFrontendUrl() {
-  const raw = (process.env.FRONTEND_URL
-    || (process.env.ALLOWED_ORIGINS || '').split(',')[0]
-    || 'http://localhost:5173').trim();
-  try {
-    const u = new URL(raw);
-    if (!['http:', 'https:'].includes(u.protocol)) throw new Error('bad proto');
-    if (process.env.NODE_ENV === 'production' && u.protocol !== 'https:') {
-      console.warn('[auth] FRONTEND_URL should be https in production:', raw);
-    }
-    return raw.replace(/\/$/, '');
-  } catch {
-    console.warn('[auth] Invalid FRONTEND_URL, falling back to http://localhost:5173:', raw);
-    return 'http://localhost:5173';
-  }
-}
-// Resolved per email so tunnel URLs take effect without a code change.
-function frontendUrl() {
-  return resolveFrontendUrl();
-}
+const { normEmail, DEV_VERIFY_FALLBACK } = service;
 
-// ALLOW_DEV_LINKS=1 exposes links for local demo without SMTP (never in prod).
-const DEV_VERIFY_FALLBACK = process.env.ALLOW_DEV_LINKS === '1' && process.env.NODE_ENV !== 'production';
-
-async function createVerificationToken(userId) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await db.execute(
-    `UPDATE email_verifications SET used = 1 WHERE user_id = ? AND used = 0`
-    , [userId]
-  );
-  await db.execute(
-    'INSERT INTO email_verifications (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
-    [userId, tokenHash, expiresAt]
-  );
-  return { token, link: `${frontendUrl()}/verify-email?token=${token}` };
-}
-const googleClient = new OAuth2Client({
-  clientId:     process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-});
-
-// Per-email throttle (second layer; IP limiter in routes is primary).
-const loginAttempts = new Map();
-const ATTEMPT_TTL_MS = 30 * 60 * 1000;
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, rec] of loginAttempts) {
-    if (rec.lockedUntil && rec.lockedUntil <= now) loginAttempts.delete(key);
-    else if (!rec.lockedUntil && now - (rec.firstSeen || now) > ATTEMPT_TTL_MS) loginAttempts.delete(key);
-  }
-  if (loginAttempts.size > 5000) {
-    const oldest = [...loginAttempts.keys()].slice(0, loginAttempts.size - 5000);
-    for (const k of oldest) loginAttempts.delete(k);
-  }
-}, 10 * 60 * 1000).unref?.();
-
-function normEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
-
-function getRateLimit(email) {
-  const key = normEmail(email);
-  if (!loginAttempts.has(key)) return { count: 0, lockedUntil: null, firstSeen: Date.now() };
-  return loginAttempts.get(key);
-}
-
-function recordFailedAttempt(email) {
-  const key = normEmail(email);
-  const record = getRateLimit(key);
-  const count  = record.count + 1;
-
-  let lockedUntil = null;
-  if (count >= 20) {
-    lockedUntil = Date.now() + 30 * 60 * 1000;
-  } else if (count >= 10) {
-    lockedUntil = Date.now() + 30 * 1000;
-  }
-
-  loginAttempts.set(key, { count, lockedUntil, firstSeen: record.firstSeen || Date.now() });
-  return count;
-}
-
-function clearAttempts(email) {
-  loginAttempts.delete(normEmail(email));
-}
-
-function checkRateLimit(email) {
-  const record = getRateLimit(email);
-  if (!record.lockedUntil) return null;
-
-  const remaining = record.lockedUntil - Date.now();
-  if (remaining <= 0) {
-    loginAttempts.delete(normEmail(email));
-    return null;
-  }
-
-  if (record.count >= 20) {
-    const mins = Math.ceil(remaining / 60000);
-    return {
-      error:    `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`,
-      retryAfter: Math.ceil(remaining / 1000),
-    };
-  } else {
-    const secs = Math.ceil(remaining / 1000);
-    return {
-      error:    `Too many failed attempts. Try again in ${secs} second${secs !== 1 ? 's' : ''}.`,
-      retryAfter: Math.ceil(remaining / 1000),
-    };
-  }
-}
-
-// ─── COOKIE HELPERS (single source: src/utils/cookies.js) ───
-// getCookieOptions + COOKIE_NAME imported above — no local duplicates.
-
-// IP-based brute-force guard (primary) — per-email Map above is the second layer
-const loginIpLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts. Try again in a minute.' },
-});
-
+// ─── COOKIE HELPER (single source: src/utils/cookies.js) ───
 function setSessionCookie(res, userId, email, req, tv = 0) {
-  const { signSession } = require('../config/jwt');
+  const { signSession } = require("../config/jwt");
   const token = signSession(jwt, { id: userId, email, tv });
   const opts = getCookieOptions(req);
   res.cookie(COOKIE_NAME, token, opts);
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     console.log(
       `[cookie] set uid=${userId} secure=${opts.secure} sameSite=${opts.sameSite} ` +
-      `partitioned=${Boolean(opts.partitioned)} proto=${req.headers?.['x-forwarded-proto'] || '-'}`
+        `partitioned=${Boolean(opts.partitioned)} proto=${req.headers?.["x-forwarded-proto"] || "-"}`,
     );
   }
   return token;
 }
 
-// ─── SESSION LOGGING ───
-const logUserSession = async (req, userId) => {
-  let conn;
-  try {
-    const parser = new UAParser(req.headers['user-agent']);
-    const result = parser.getResult();
-
-    const device  = result.device.type || 'Desktop';
-    const browser = result.browser.name || 'Unknown';
-    const os      = result.os.name || 'Unknown';
-
-    const ip =
-      req.headers['x-forwarded-for']?.split(',')[0] ||
-      req.socket?.remoteAddress ||
-      req.ip ||
-      'Unknown';
-
-    const location = 'Unknown';
-
-    // Transaction so concurrent logins can't leave two is_current=true rows.
-    conn = await db.getConnection();
-    await conn.beginTransaction();
-    await conn.execute(
-      'UPDATE user_sessions SET is_current = false WHERE user_id = ?',
-      [userId]
-    );
-
-    await conn.execute(
-      `INSERT INTO user_sessions
-       (user_id, device, browser, os, ip_address, location, is_current)
-       VALUES (?, ?, ?, ?, ?, ?, true)`,
-      [userId, device, browser, os, ip, location]
-    );
-    await conn.commit();
-  } catch (err) {
-    try { await conn?.rollback(); } catch (_) {}
-    console.error('SESSION LOG ERROR:', err);
-  } finally {
-    try { conn?.release(); } catch (_) {}
-  }
-};
+// IP-based brute-force guard (primary) — per-email Map in the service is layer 2.
+const loginIpLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Try again in a minute." },
+});
 
 // ─── VALIDATION SCHEMAS ───
 const registerSchema = z.object({
-  name: z.string().trim().min(2, 'Name too short').max(100),
-  email: z.string().trim().toLowerCase().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(128),
-  fitness_goal: z.string().trim().max(100).optional().default('general fitness'),
+  name: z.string().trim().min(2, "Name too short").max(100),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required').max(128),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(1, "Password is required").max(128),
 });
 
 const googleLoginSchema = z.object({
-  code: z.string().trim().min(1, 'Google auth code is required').max(4096),
+  code: z.string().trim().min(1, "Google auth code is required").max(4096),
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required').max(128),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters').max(128),
+  currentPassword: z.string().min(1, "Current password is required").max(128),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(128),
 });
 
 const changeEmailSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required').max(128),
-  newEmail: z.string().trim().toLowerCase().email('Invalid new email address'),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(1, "Password is required").max(128),
+  newEmail: z.string().trim().toLowerCase().email("Invalid new email address"),
 });
 
 // ─── GET /api/auth/me ───
-
 // Session probe. Returns 401 (not 200-null) for missing/dead sessions so the
-// frontend 401-funnel (apiClient → vitalis:unauthorized → logout) actually
-// fires and stale cookies are dropped instead of lingering forever.
-async function getme(req,res,next){
-  try{
-      const token = req.cookies?.[COOKIE_NAME];
+// frontend 401-funnel fires and stale cookies are dropped.
+async function getme(req, res, next) {
+  try {
+    const token = req.cookies?.[COOKIE_NAME];
 
-      // Codes let the frontend/console distinguish "browser never sent the
-      // cookie" (NO_COOKIE — cross-site/tunnel issue) from "cookie sent but
-      // dead" (INVALID_SESSION) without leaking anything sensitive.
-      if (!token) {
-        if (process.env.NODE_ENV !== 'production') {
-          const h = req.headers || {};
-          console.log(
-            `[me] NO_COOKIE origin=${h.origin || '-'} referer=${String(h.referer || '-').slice(0, 80)} ` +
-            `cookieHeader=${req.headers.cookie ? `present(${req.headers.cookie.length}c)` : 'absent'}`
-          );
-        }
-        return res.status(401).json({ error: 'Unauthorized', code: 'NO_COOKIE', user: null });
+    // Codes distinguish "browser never sent the cookie" (NO_COOKIE) from
+    // "cookie sent but dead" (INVALID_SESSION).
+    if (!token) {
+      if (process.env.NODE_ENV !== "production") {
+        const h = req.headers || {};
+        console.log(
+          `[me] NO_COOKIE origin=${h.origin || "-"} referer=${String(h.referer || "-").slice(0, 80)} ` +
+            `cookieHeader=${req.headers.cookie ? `present(${req.headers.cookie.length}c)` : "absent"}`,
+        );
       }
+      return res.status(401).json({ error: "Unauthorized", code: "NO_COOKIE", user: null });
+    }
 
-      try {
-        const { verifySession } = require('../config/jwt');
-        const decoded = verifySession(jwt, token);
+    try {
+      const { verifySession } = require("../config/jwt");
+      const decoded = verifySession(jwt, token);
 
-        const [rows] = await db.execute(`
-          SELECT
-            u.id,
-            u.name,
-            u.email,
-            u.fitness_goal,
-            u.is_verified,
-            u.onboarding_completed,
-            u.token_version,
-            p.avatar_url AS avatar
-          FROM users u
-          LEFT JOIN user_profiles p ON p.user_id = u.id
-          WHERE u.id = ?
-        `, [decoded.id]);
+      const user = await service.getMe(decoded.id);
 
-        if (rows.length === 0) {
-          res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
-          return res.status(401).json({ error: 'Invalid session', code: 'INVALID_SESSION', user: null });
-        }
-
-        const user = rows[0];
-        // Revocation gate (mirrors verifyUser): logout / password change /
-        // password reset bump token_version — cookies minted before that must
-        // die here too, not linger for the JWT's full 12h.
-        // NOTE: is_verified is intentionally NOT enforced — unverified users
-        // get 200 with isVerified:false so the frontend routes them to
-        // /check-email instead of logging them out.
-        if (Number(user.token_version || 0) !== Number(decoded.tv || 0)) {
-          res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
-          return res.status(401).json({ error: 'Session revoked. Please sign in again.', code: 'SESSION_REVOKED', user: null });
-        }
-        res.json({
-          user: {
-            id:     user.id,
-            name:   user.name,
-            email:  user.email,
-            avatar: user.avatar,
-            goal:   user.fitness_goal,
-            isVerified:          Boolean(user.is_verified),
-            onboardingCompleted: Boolean(user.onboarding_completed),
-          },
-        });
-      } catch (err) {
+      if (!user) {
         res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
-        return res.status(401).json({ error: 'Invalid session', code: 'INVALID_SESSION', user: null });
+        return res
+          .status(401)
+          .json({ error: "Invalid session", code: "INVALID_SESSION", user: null });
       }
-  }catch(e){ next(e); }
-}
 
-async function postregister(req,res,next){
-  try{
-      const { name, password, fitness_goal = 'general fitness' } = req.body;
-      // Normalize email BEFORE any DB touch — schemas lowercase, but the
-      // validate() middleware can be bypassed, so never trust raw casing.
-      const email = normEmail(req.body?.email);
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return res.status(400).json({ error: 'Invalid email address' });
-      }
-    
-      try {
-        const [existing] = await db.execute(
-          'SELECT email FROM users WHERE email = ?', [email]
-        );
-        if (existing.length > 0) {
-          return res.status(400).json({ error: 'Email already registered in Vitalis labs.' });
-        }
-    
-        const salt     = await bcrypt.genSalt(10);
-        const hashedPw = await bcrypt.hash(password, salt);
-
-        const [insertResult] = await db.execute(
-          'INSERT INTO users (name, email, password, fitness_goal, is_online, is_verified, onboarding_completed) VALUES (?, ?, ?, ?, ?, 0, 0)',
-          [name, email, hashedPw, fitness_goal, 0]
-        );
-        const newUserId = insertResult.insertId;
-
-        // Email verification (link-based). Never block registration on SMTP.
-        const { link } = await createVerificationToken(newUserId);
-        let emailed = false;
-        try {
-          await sendVerificationEmail(email, link);
-          emailed = true;
-        } catch (mailErr) {
-          console.error('Verification email failed (SMTP?):', mailErr.message);
-        }
-
-        const payload = { success: true, message: 'Account created. Check your email to verify.', needsVerification: true, email };
-        if (!emailed && DEV_VERIFY_FALLBACK) payload.devVerificationLink = link;
-        res.status(201).json(payload);
-      } catch (err) {
-        console.error('Register error:', err.code || err.message);
-        if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(400).json({ error: 'Email already registered in Vitalis labs.' });
-        }
-        next(err);
-      }
-  }catch(e){ next(e); }
-}
-
-async function postlogin(req,res,next){
-  try{
-      const { password } = req.body;
-      const email = normEmail(req.body?.email);
-    
-      const lockStatus = checkRateLimit(email);
-      if (lockStatus) {
-        return res.status(429).json({
-          error:    lockStatus.error,
-          retryAfter: lockStatus.retryAfter,
+      // Revocation gate (mirrors verifyUser). is_verified is intentionally NOT
+      // enforced — unverified users get 200 with isVerified:false.
+      if (Number(user.token_version || 0) !== Number(decoded.tv || 0)) {
+        res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
+        return res.status(401).json({
+          error: "Session revoked. Please sign in again.",
+          code: "SESSION_REVOKED",
+          user: null,
         });
       }
-    
-      try {
-        const [users] = await db.execute(
-          'SELECT id, name, email, password, fitness_goal, avatar_url, is_verified, onboarding_completed, is_online, token_version FROM users WHERE email = ?', [email]
-        );
-    
-        if (users.length === 0) {
-          recordFailedAttempt(email);
-          return res.status(401).json({ error: 'Invalid credentials' });
-        }
-    
-        const user    = users[0];
-        const isMatch = await bcrypt.compare(password, user.password);
-    
-        if (!isMatch) {
-          const attempts = recordFailedAttempt(email);
-    
-          let hint = 'Invalid credentials';
-          if (attempts >= 20) hint = 'Too many failed attempts. Try again in 30 minutes.';
-          else if (attempts >= 10) hint = 'Too many failed attempts. Try again in 30 seconds.';
-    
-          return res.status(401).json({ error: hint });
-        }
-    
-        clearAttempts(email);
-
-        if (!user.is_verified) {
-          return res.status(403).json({
-            error: 'Please verify your email before signing in. Check your inbox for the verification link.',
-            code: 'NEEDS_VERIFICATION',
-            email: user.email,
-          });
-        }
-
-        await db.execute('UPDATE users SET is_online = 1 WHERE id = ?', [user.id]);
-    
-        const [profileRows] = await db.execute(
-          'SELECT avatar_url FROM user_profiles WHERE user_id = ?', [user.id]
-        );
-        const latestAvatar = profileRows[0]?.avatar_url || user.avatar_url || null;
-    
-        setSessionCookie(res, user.id, user.email, req, user.token_version);
-        await logUserSession(req, user.id);
-
-        res.json({
-          id:     user.id,
-          name:   user.name,
-          email:  user.email,
-          avatar: latestAvatar,
-          goal:   user.fitness_goal,
-          isVerified:          Boolean(user.is_verified),
+      res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          goal: user.fitness_goal,
+          isVerified: Boolean(user.is_verified),
           onboardingCompleted: Boolean(user.onboarding_completed),
-        });
-      } catch (err) {
-        console.error('Login error:', err.code || err.message);
-        next(err);
-      }
-  }catch(e){ next(e); }
-}
-
-async function postgoogleLogin(req,res,next){
-  try{
-      const { code } = req.body;
-    
-      if (!code) {
-        return res.status(400).json({ error: 'Missing authorization code' });
-      }
-    
-      try {
-        // Exchange auth code for tokens
-        const { tokens } = await googleClient.getToken({
-          code,
-          redirect_uri: 'postmessage',
-        });
-    
-        if (!tokens.id_token) {
-          return res.status(401).json({ error: 'No ID token returned from Google' });
-        }
-    
-        // Verify the ID token
-        const ticket = await googleClient.verifyIdToken({
-          idToken:  tokens.id_token,
-          audience: process.env.GOOGLE_CLIENT_ID,
-        });
-    
-        const payload                  = ticket.getPayload();
-        const { name, picture } = payload;
-        const email = normEmail(payload.email);
-    
-        if (!email) {
-          return res.status(401).json({ error: 'Google account has no email' });
-        }
-    
-        // Check if user exists
-        const [users] = await db.execute(
-          'SELECT id, name, email, password, fitness_goal, avatar_url, is_verified, onboarding_completed, is_online, token_version FROM users WHERE email = ?', [email]
-        );
-    
-        let user;
-    
-if (users.length === 0) {
-          // Create new user. Password is a random bcrypt secret (never known,
-          // never used for login) — account recovery goes through the
-          // email-OTP forgot-password flow, which overwrites it.
-          const salt           = await bcrypt.genSalt(10);
-          const randomHashedPw = await bcrypt.hash(
-            crypto.randomBytes(16).toString('hex'), salt
-          );
-          const defaultGoal = 'Unspecified (Google Auth)';
-
-          const [insertResult] = await db.execute(
-            'INSERT INTO users (name, email, password, fitness_goal, is_online, avatar_url, is_verified, onboarding_completed) VALUES (?, ?, ?, ?, ?, ?, 1, 0)',
-            [name, email, randomHashedPw, defaultGoal, 1, picture]
-          );
-
-          const [newUsers] = await db.execute(
-            'SELECT id, name, email, fitness_goal, avatar_url, is_verified, onboarding_completed, token_version FROM users WHERE id = ?', [insertResult.insertId]
-          );
-          user = newUsers[0];
-        } else {
-          user = users[0];
-          // Google-verified email counts as verified
-          await db.execute('UPDATE users SET is_online = 1, is_verified = 1 WHERE id = ?', [user.id]);
-          user.is_verified = 1;
-        }
-    
-        const [profileRows] = await db.execute(
-          'SELECT avatar_url FROM user_profiles WHERE user_id = ?', [user.id]
-        );
-        const latestAvatar = profileRows[0]?.avatar_url || user.avatar_url || picture;
-    
-        setSessionCookie(res, user.id, user.email, req, user.token_version);
-        await logUserSession(req, user.id);
-    
-        res.json({
-          id:     user.id,
-          name:   user.name,
-          email:  user.email,
-          avatar: latestAvatar,
-          goal:   user.fitness_goal,
-          isVerified:          true,
-          onboardingCompleted: Boolean(user.onboarding_completed),
-        });
-      } catch (err) {
-        console.error('Google Login Error:', err.code || err.message);
-        // Don't leak provider internals (tokens, audience mismatches) to the client
-        return res.status(401).json({ error: 'Google authentication failed', code: 'GOOGLE_AUTH_FAILED' });
-      }
-  }catch(e){ next(e); }
-}
-
-async function postchangePassword(req,res,next){
-  try{
-      // verifyUser middleware already populated req.user — use it as source of truth.
-      // Cookie-only: no Bearer fallback.
-      let userId = req.user?.id || null;
-      if (!userId) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-      const decoded = { id: userId };
-    
-      const { currentPassword, newPassword } = req.body;
-    
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
-      if (newPassword.length < 8) {
-        return res.status(400).json({ error: 'New password must be at least 8 characters' });
-      }
-    
-      try {
-        const [rows] = await db.execute(
-          'SELECT password FROM users WHERE id = ?', [decoded.id]
-        );
-        if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    
-        const isMatch = await bcrypt.compare(currentPassword, rows[0].password);
-        if (!isMatch) {
-          return res.status(401).json({ error: 'Current password is incorrect' });
-        }
-    
-        const salt    = await bcrypt.genSalt(10);
-        const newHash = await bcrypt.hash(newPassword, salt);
-        // Bump token_version: every previously issued cookie is rejected by
-        // verifyUser from this point on (true revocation, not just flags).
-        await db.execute('UPDATE users SET password = ?, token_version = token_version + 1 WHERE id = ?', [newHash, decoded.id]);
-        await db.execute('UPDATE user_sessions SET is_current = 0 WHERE user_id = ?', [decoded.id]);
-
-        res.json({ success: true, message: 'Password updated' });
-      } catch (err) {
-        console.error('Change Password Error:', err.code || err.message);
-        next(err);
-      }
-  }catch(e){ next(e); }
-}
-
-async function postlogout(req,res,next){
-  try{
-      const token = req.cookies?.[COOKIE_NAME];
-    
-      if (token) {
-        try {
-          const { verifySession } = require('../config/jwt');
-          const decoded = verifySession(jwt, token);
-          if (decoded?.id) {
-            // Bump token_version so the logged-out cookie can never be replayed.
-            await db.execute('UPDATE users SET is_online = 0, token_version = token_version + 1 WHERE id = ?', [decoded.id]);
-            await db.execute('UPDATE user_sessions SET is_current = 0 WHERE user_id = ?', [decoded.id]);
-          }
-        } catch (_) {}
-      }
-    
+          // Module 1 — governance fields surfaced to the Profile page.
+          role: user.role,
+          status: user.status,
+          acceptedTermsAt: user.accepted_terms_at,
+          acceptedTermsVersion: user.accepted_terms_version,
+        },
+      });
+    } catch (err) {
       res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
-      res.json({ success: true, message: 'User logged out.' });
-  }catch(e){ next(e); }
+      return res
+        .status(401)
+        .json({ error: "Invalid session", code: "INVALID_SESSION", user: null });
+    }
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function postregister(req, res, next) {
+  try {
+    const { name, password } = req.body;
+    // Normalize email BEFORE any DB touch — never trust raw casing.
+    const email = normEmail(req.body?.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Invalid email address" });
+    }
+    // Module 1 — consent is a hard requirement, recorded server-side with a
+    // version stamp; the client checkbox alone is not an audit trail.
+    if (req.body?.agreed !== true) {
+      return res.status(400).json({ error: "You must accept the Terms of Use and Privacy Policy" });
+    }
+
+    try {
+      const { link, emailed, autoVerified } = await service.register({
+        name,
+        email,
+        password,
+      });
+
+      // Dev/test auto-activates the account (no inbox needed) — send the user
+      // straight to sign in instead of the check-your-email screen.
+      if (autoVerified) {
+        return res.status(201).json({
+          success: true,
+          message: "Account created. You can sign in now.",
+          needsVerification: false,
+          email,
+        });
+      }
+
+      /** @type {{ success: boolean, message: string, needsVerification: boolean, email: string, devVerificationLink?: string }} */
+      const payload = {
+        success: true,
+        message: "Account created. Check your email to verify.",
+        needsVerification: true,
+        email,
+      };
+      if (!emailed && DEV_VERIFY_FALLBACK) payload.devVerificationLink = link;
+      res.status(201).json(payload);
+    } catch (err) {
+      if (err.isOperational) return res.status(err.status).json({ error: err.message });
+      console.error("Register error:", err.code || err.message);
+      next(err);
+    }
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function postlogin(req, res, next) {
+  try {
+    const { password } = req.body;
+    const email = normEmail(req.body?.email);
+
+    try {
+      const { user, latestAvatar } = await service.login({ email, password });
+
+      setSessionCookie(res, user.id, user.email, req, user.token_version);
+      await service.logUserSession(req, user.id);
+
+      res.json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: latestAvatar,
+        goal: user.fitness_goal,
+        isVerified: Boolean(user.is_verified),
+        onboardingCompleted: Boolean(user.onboarding_completed),
+        // Module 1 — keep the auth-context user shape identical to /me.
+        role: user.role,
+        status: user.status,
+        acceptedTermsAt: user.accepted_terms_at,
+        acceptedTermsVersion: user.accepted_terms_version,
+      });
+    } catch (err) {
+      if (err.isOperational) {
+        const body = { error: err.message };
+        if (err.code === "RATE_LIMITED" && err.details?.retryAfter) {
+          body.retryAfter = err.details.retryAfter;
+        }
+        if (err.code === "NEEDS_VERIFICATION") {
+          body.code = "NEEDS_VERIFICATION";
+          body.email = err.details?.email;
+        }
+        if (err.code === "ACCOUNT_DEACTIVATED") {
+          body.code = "ACCOUNT_DEACTIVATED";
+        }
+        return res.status(err.status).json(body);
+      }
+      console.error("Login error:", err.code || err.message);
+      next(err);
+    }
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function postgoogleLogin(req, res, next) {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ error: "Missing authorization code" });
+    }
+
+    try {
+      const { user, latestAvatar } = await service.googleLogin(code);
+
+      setSessionCookie(res, user.id, user.email, req, user.token_version);
+      await service.logUserSession(req, user.id);
+
+      res.json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: latestAvatar,
+        goal: user.fitness_goal,
+        isVerified: true,
+        onboardingCompleted: Boolean(user.onboarding_completed),
+      });
+    } catch (err) {
+      // Known provider states keep their specific message; anything else is
+      // masked so tokens/audience details never leak to the client.
+      if (err.isOperational && err.code !== "GOOGLE_AUTH_FAILED") {
+        return res.status(err.status).json({ error: err.message });
+      }
+      console.error("Google Login Error:", err.code || err.message);
+      return res
+        .status(401)
+        .json({ error: "Google authentication failed", code: "GOOGLE_AUTH_FAILED" });
+    }
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function postchangePassword(req, res, next) {
+  try {
+    // verifyUser middleware already populated req.user — use it as source of truth.
+    const userId = req.user?.id || null;
+    if (!userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+
+    try {
+      const result = await service.changePassword(userId, currentPassword, newPassword);
+      const changedAt = new Date().toISOString();
+
+      // Keep THIS device signed in: re-issue the session cookie with the fresh
+      // token_version (all other devices were just revoked by the bump).
+      setSessionCookie(res, userId, result.email, req, result.tokenVersion);
+
+      // 1) In-app notification — fail-soft, never blocks the response.
+      try {
+        await notificationController.notifyUser(userId, {
+          message: "Your password was changed. All other devices were signed out — if this wasn't you, secure your account now.",
+          type: "warning",
+          category: "SYSTEM",
+        });
+      } catch (notifErr) {
+        console.error("[change-password] notification failed:", notifErr.message);
+      }
+
+      // 2) Security-alert email — distinct reusable template; fail-soft so a
+      // mail hiccup can never undo a completed password change.
+      let emailSent = false;
+      try {
+        await emailService.sendPasswordChangedEmail(
+          result.email,
+          result.name,
+          service.frontendUrl(),
+          changedAt,
+        );
+        emailSent = true;
+      } catch (mailErr) {
+        console.error("[change-password] security email failed:", mailErr.message);
+      }
+
+      res.json({
+        success: true,
+        message: "Password updated — other devices were signed out",
+        emailSent,
+      });
+    } catch (err) {
+      if (err.isOperational) return res.status(err.status).json({ error: err.message });
+      console.error("Change Password Error:", err.code || err.message);
+      next(err);
+    }
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function postlogout(req, res, next) {
+  try {
+    const token = req.cookies?.[COOKIE_NAME];
+
+    if (token) {
+      try {
+        const { verifySession } = require("../config/jwt");
+        const decoded = verifySession(jwt, token);
+        if (decoded?.id) await service.logout(decoded.id);
+      } catch (_) {}
+    }
+
+    res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
+    res.json({ success: true, message: "User logged out." });
+  } catch (e) {
+    next(e);
+  }
 }
 
 // ─── POST /api/auth/send-verification { email } — (re)send verification link
-async function postsendVerification(req,res,next){
-  try{
-      const { email } = req.body;
-      if (!email) return res.status(400).json({ error: 'Email is required' });
-      const normalized = String(email).toLowerCase().trim();
-      const [users] = await db.execute(
-        'SELECT id, name, is_verified FROM users WHERE email = ?', [normalized]
-      );
-      // Anti-enumeration: identical response whether account exists or not,
-      // and whether already verified or not.
-      const generic = { success: true, message: 'If that account exists, a verification email was sent.', email: normalized };
-      if (users.length === 0) return res.json(generic);
-      const user = users[0];
-      if (user.is_verified) return res.json(generic);
+async function postsendVerification(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+    const normalized = String(email).toLowerCase().trim();
 
-      const { link } = await createVerificationToken(user.id);
-      let emailed = false;
-      try {
-        await sendVerificationEmail(normalized, link);
-        emailed = true;
-      } catch (mailErr) {
-        console.error('Verification email failed (SMTP?):', mailErr.message);
-      }
-      const payload = { ...generic };
-      if (!emailed && DEV_VERIFY_FALLBACK) payload.devVerificationLink = link;
-      res.json(payload);
-  }catch(e){ next(e); }
+    // Anti-enumeration: identical response whether or not the account exists.
+    const generic = {
+      success: true,
+      message: "If that account exists, a verification email was sent.",
+      email: normalized,
+    };
+
+    const result = await service.resendVerification(normalized);
+    if (!result) return res.json(generic);
+
+    /** @type {{ success: boolean, message: string, email: string, devVerificationLink?: string }} */
+    const payload = { ...generic };
+    if (!result.emailed && DEV_VERIFY_FALLBACK) payload.devVerificationLink = result.link;
+    res.json(payload);
+  } catch (e) {
+    next(e);
+  }
 }
 
 // ─── GET /api/auth/verify-email?token=... — activate account via link
-async function getverifyEmail(req,res,next){
-  try{
-      const { token } = req.query;
-      if (!token) return res.status(400).json({ error: 'Verification token is required' });
-      const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
-      const [rows] = await db.execute(
-        `SELECT id, user_id FROM email_verifications
-         WHERE token_hash = ? AND used = 0 AND expires_at > NOW() LIMIT 1`,
-        [tokenHash]
-      );
-      if (rows.length === 0) {
-        return res.status(400).json({ error: 'This verification link is invalid or expired. Request a new one.' });
-      }
-      await db.execute('UPDATE email_verifications SET used = 1 WHERE id = ?', [rows[0].id]);
-      await db.execute('UPDATE users SET is_verified = 1 WHERE id = ?', [rows[0].user_id]);
-      res.json({ success: true, message: 'Email verified. Your Vitalis account is now active.' });
-  }catch(e){ next(e); }
+async function getverifyEmail(req, res, next) {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: "Verification token is required" });
+    try {
+      await service.verifyEmail(token);
+      res.json({
+        success: true,
+        message: "Email verified. Your Vitalis account is now active.",
+      });
+    } catch (err) {
+      if (err.isOperational) return res.status(err.status).json({ error: err.message });
+      next(err);
+    }
+  } catch (e) {
+    next(e);
+  }
 }
 
-// ─── PATCH /api/auth/change-email { email, password, newEmail } — fix a typo before verifying
-async function patchchangeEmail(req,res,next){
-  try{
-      const { email, password, newEmail } = req.body;
-      if (!email || !password || !newEmail) {
-        return res.status(400).json({ error: 'Current email, password and new email are required' });
-      }
-      const genericFail = { error: 'Invalid credentials or account state.' };
-      const [users] = await db.execute('SELECT id, email, password, is_verified FROM users WHERE email = ?', [String(email).toLowerCase()]);
-      if (users.length === 0) return res.status(400).json(genericFail);
-      const user = users[0];
-      if (user.is_verified) return res.status(400).json(genericFail);
-      const isMatch = await bcrypt.compare(password, user.password);
-      // Anti-enumeration: wrong password returns the same generic 400 as
-      // unknown account / already-verified, so attackers can't probe which
-      // emails exist. Typo-fix flow stays unauthenticated by design (unverified
-      // users can't pass verifyUser which 403s NEEDS_VERIFICATION) — password
-      // check + 5/15m limiter + old-inbox notice is the guard.
-      if (!isMatch) return res.status(400).json(genericFail);
+// ─── PATCH /api/auth/change-email — fix a typo before verifying
+async function patchchangeEmail(req, res, next) {
+  try {
+    const { email, password, newEmail } = req.body;
+    if (!email || !password || !newEmail) {
+      return res
+        .status(400)
+        .json({ error: "Current email, password and new email are required" });
+    }
 
-      const normalized = String(newEmail).toLowerCase().trim();
-      const oldEmail = String(user.email).toLowerCase();
-      if (normalized === oldEmail) return res.status(400).json(genericFail);
-      try {
-        await db.execute('UPDATE users SET email = ? WHERE id = ?', [normalized, user.id]);
-      } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'That email is already registered.' });
-        throw err;
-      }
-      // Typo-fix flow is unverified-only + password-checked, but a stolen
-      // session could still swap the address: notify the OLD inbox best-effort
-      // (typo address may bounce — never fail the request on it).
-      try {
-        const { getTransporter } = require('../config/mailer');
-        await getTransporter().sendMail({
-          from: process.env.EMAIL_USER,
-          to: oldEmail,
-          subject: 'Your Vitalis email was changed',
-          html: `<p>Your Vitalis account email was changed to ${normalized}. If this wasn't you, reset your password immediately.</p>`,
-        });
-      } catch (noticeErr) {
-        console.warn('Change-email notice to old address failed:', noticeErr.message);
-      }
-      const { link } = await createVerificationToken(user.id);
-      let emailed = false;
-      try {
-        await sendVerificationEmail(normalized, link);
-        emailed = true;
-      } catch (mailErr) {
-        console.error('Verification email failed (SMTP?):', mailErr.message);
-      }
-      const payload = { success: true, message: 'Email updated. Check your new inbox to verify.', email: normalized };
+    try {
+      const { normalized, link, emailed } = await service.changeEmail({
+        email,
+        password,
+        newEmail,
+      });
+      /** @type {{ success: boolean, message: string, email: string, devVerificationLink?: string }} */
+      const payload = {
+        success: true,
+        message: "Email updated. Check your new inbox to verify.",
+        email: normalized,
+      };
       if (!emailed && DEV_VERIFY_FALLBACK) payload.devVerificationLink = link;
       res.json(payload);
-  }catch(e){ next(e); }
+    } catch (err) {
+      if (err.isOperational) return res.status(err.status).json({ error: err.message });
+      console.error("Change Email Error:", err.code || err.message);
+      next(err);
+    }
+  } catch (e) {
+    next(e);
+  }
 }
 
-// ─── POST /api/auth/complete-onboarding — mark onboarding done (verified users)
-async function postcompleteOnboarding(req,res,next){
-  try{
-      await db.execute('UPDATE users SET onboarding_completed = 1 WHERE id = ?', [req.user.id]);
-      res.json({ success: true });
-  }catch(e){ next(e); }
+// ─── POST /api/auth/complete-onboarding — mark onboarding done
+async function postcompleteOnboarding(req, res, next) {
+  try {
+    // Body may carry the wizard's allergy list; absent/{} means "don't touch it".
+    const { allergies } = req.body || {};
+    await service.completeOnboarding(req.user.id, allergies);
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
 }
 
-module.exports = { getme, postregister, postlogin, postgoogleLogin, postchangePassword, postlogout, postsendVerification, getverifyEmail, patchchangeEmail, postcompleteOnboarding, registerSchema, loginSchema, googleLoginSchema, changePasswordSchema, changeEmailSchema, loginIpLimiter };
+// ─── MODULE 1 — ACCOUNT GOVERNANCE ───
+// POST /api/auth/deactivate — password-confirmed soft deactivation. The server
+// bumps token_version so every session (this device included) dies instantly;
+// the cookie is cleared so the browser drops the session too. Data is kept.
+async function postDeactivate(req, res, next) {
+  try {
+    const { password } = req.body || {};
+    if (!password) {
+      return res.status(400).json({ error: "Password confirmation is required" });
+    }
+    await service.deactivateAccount(req.user.id, password);
+    // Session is already revoked server-side — drop the cookie client-side.
+    res.clearCookie(COOKIE_NAME, getClearCookieOptions(req));
+    res.json({
+      success: true,
+      message: "Account deactivated. Your data is safe — sign in again to reactivate.",
+    });
+  } catch (err) {
+    if (err.isOperational) {
+      return res.status(err.status).json({ error: err.message, code: err.code });
+    }
+    next(err);
+  }
+}
+
+// POST /api/auth/reactivate — credential-verified flip back to active. Does
+// NOT log the user in; the client follows up with a normal login so session
+// logging/cookies stay on the happy path.
+async function postReactivate(req, res, next) {
+  try {
+    const { email: rawEmail, password } = req.body || {};
+    if (!rawEmail || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+    await service.reactivateAccount({ email: normEmail(rawEmail), password });
+    res.json({ success: true, message: "Account reactivated. Sign in to continue." });
+  } catch (err) {
+    if (err.isOperational) {
+      const body = { error: err.message, code: err.code };
+      return res.status(err.status).json(body);
+    }
+    next(err);
+  }
+}
+
+// ─── GET /api/auth/allergies — read the saved allergy list (read-only).
+// Lets Profile > Personalization show current allergies; writes still go
+// through POST /complete-onboarding (setAllergies = whole-list replace).
+async function getallergies(req, res, next) {
+  try {
+    const allergies = await service.getAllergies(req.user.id);
+    res.json({ allergies });
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = {
+  getme,
+  postregister,
+  postlogin,
+  postgoogleLogin,
+  postchangePassword,
+  postlogout,
+  postsendVerification,
+  getverifyEmail,
+  patchchangeEmail,
+  postcompleteOnboarding,
+  getallergies,
+  postDeactivate,
+  postReactivate,
+  registerSchema,
+  loginSchema,
+  googleLoginSchema,
+  changePasswordSchema,
+  changeEmailSchema,
+  loginIpLimiter,
+};

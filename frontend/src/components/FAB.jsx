@@ -13,7 +13,7 @@ const FAB = ({ onSave }) => {
         aria-label="Log activity"
         className="fixed bottom-24 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-[var(--accent)] rounded-full shadow-lg shadow-[var(--accent)]/20 flex items-center justify-center hover:scale-110 transition-transform active:scale-95 z-50"
       >
-        <span className="material-symbols-outlined text-[var(--text-inverse)] text-[32px] font-bold">add</span>
+        <span className="material-symbols-outlined text-[var(--text-inverse)] text-[length:var(--fs-32)] font-bold">add</span>
       </button>
 
       <LogActivityModal isOpen={isOpen} onClose={() => setIsOpen(false)} onSave={onSave} />

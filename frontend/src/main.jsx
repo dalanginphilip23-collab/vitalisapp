@@ -21,6 +21,9 @@ import './index.css';
 import App from './App.jsx';
 import { GOOGLE_CLIENT_ID } from './app/config/env.js';
 import { installGlobalButtonLoading } from './lib/buttonLoading.js';
+// Side-effect import ONLY: attaches the global beforeinstallprompt listener at
+// boot so an install prompt firing before hydration is never missed.
+import './lib/pwaInstall.js';
 
 installGlobalButtonLoading();
 

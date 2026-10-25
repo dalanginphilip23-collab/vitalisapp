@@ -6,5 +6,4 @@ export const qk = {
   todayMeals: (userId) => ['meals', 'today', userId],
   foodLogs: (userId) => ['food-logs', userId],
   nutrientGoals: (userId) => ['nutrient-goals', userId],
-  analytics: (userId, range) => ['analytics', userId, range],
 };

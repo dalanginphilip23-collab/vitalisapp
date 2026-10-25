@@ -17,7 +17,7 @@ export function installGlobalButtonLoading() {
   document.addEventListener(
     'click',
     (e) => {
-      const btn = e.target?.closest?.('button');
+      const btn = /** @type {any} */ (e.target)?.closest?.('button');
       if (!btn || btn.disabled) return;
       if (btn.closest?.('[data-no-flash]')) return;
       if (btn.hasAttribute?.('data-managed-loading')) return;

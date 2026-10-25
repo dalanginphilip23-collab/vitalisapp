@@ -54,6 +54,11 @@ function calcBmr({ weightKg, heightCm, age, sex }) {
   return Math.round((male + female) / 2);
 }
 
+/**
+ * Build a nutrition plan (BMI/BMR/TDEE + macro split) from raw profile input.
+ * @param {{ weightKg?: number | string | null, heightCm?: number | string | null, dob?: string | number | Date | null, sex?: string | null, activityLevel?: string | null, goalType?: string | null, pace?: string | null }} [input]
+ * @returns {{ bmi: number | null, bmiCategory: string, age: number | null, bmr: number | null, tdee: number | null, dailyKcal: number | null, proteinG: number | null, carbsG: number | null, fatG: number | null }}
+ */
 function generatePlan(input = {}) {
   const { weightKg, heightCm, dob, sex, activityLevel, goalType, pace } = input;
   const bmi = calcBmi(weightKg, heightCm);
@@ -64,22 +69,26 @@ function generatePlan(input = {}) {
 
   let dailyKcal = tdee;
   if (tdee) {
+    // Pace-aware deltas cover the full validated enum (PACES in
+    // goals.service: SLOW, GRADUAL, MODERATE, FASTER, AGGRESSIVE). Unknown or
+    // missing pace keeps the historical default (LOSE → -500 via MODERATE,
+    // GAIN → +250 via GRADUAL — a small, safe surplus). GAIN never exceeds
+    // +400 — aggressive bulking is deliberately not offered; the 1200/1500
+    // kcal floor guards deep deficits.
+    const KCAL_DELTA_BY_PACE = {
+      LOSE_WEIGHT: { SLOW: -250, GRADUAL: -300, MODERATE: -500, FASTER: -750, AGGRESSIVE: -750, DEFAULT: -500 },
+      GAIN_WEIGHT: { SLOW: 125, GRADUAL: 250, MODERATE: 400, FASTER: 250, AGGRESSIVE: 400, DEFAULT: 250 },
+    };
     const p = (pace || '').toUpperCase();
-    switch (goalType) {
-      case 'LOSE_WEIGHT':
-        dailyKcal = tdee - (p === 'GRADUAL' ? 300 : p === 'FASTER' ? 750 : 500);
-        break;
-      case 'GAIN_WEIGHT':
-        dailyKcal = tdee + (p === 'MODERATE' ? 400 : 250);
-        break;
-      case 'BUILD_MUSCLE':
-        dailyKcal = tdee + 200;
-        break;
-      case 'PERFORMANCE':
-        dailyKcal = tdee + 100;
-        break;
-      default:
-        dailyKcal = tdee; // MAINTAIN_WEIGHT
+    if (goalType === 'LOSE_WEIGHT' || goalType === 'GAIN_WEIGHT') {
+      const deltas = KCAL_DELTA_BY_PACE[goalType];
+      dailyKcal = tdee + (deltas[p] ?? deltas.DEFAULT);
+    } else if (goalType === 'BUILD_MUSCLE') {
+      dailyKcal = tdee + 200;
+    } else if (goalType === 'PERFORMANCE') {
+      dailyKcal = tdee + 100;
+    } else {
+      dailyKcal = tdee; // MAINTAIN_WEIGHT
     }
     const floor = sex === 'female' ? 1200 : 1500;
     dailyKcal = Math.max(dailyKcal, floor);

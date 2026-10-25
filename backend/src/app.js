@@ -62,11 +62,15 @@ function createApp(io) {
   const json2mb = express.json({ limit: "2mb" });
   app.use("/api/food-logs/analyze-pic", json10mb);
   app.use("/api/analyze-pose", json10mb);
+  // Progress photos: image_data is a data URL; the 2mb global cap truncated
+  // uploads that the progress service itself accepts (~4MB) with a cryptic 413.
+  app.use("/api/progress/photos", json10mb);
   app.use((req, res, next) => {
     const p = req.path || "";
     if (
       p.startsWith("/api/food-logs/analyze-pic") ||
-      p.startsWith("/api/analyze-pose")
+      p.startsWith("/api/analyze-pose") ||
+      p.startsWith("/api/progress/photos")
     )
       return next();
     return json2mb(req, res, next);

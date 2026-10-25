@@ -40,13 +40,26 @@ export default defineConfig(({ mode }) => {
           name: 'Vitalis',
           short_name: 'Vitalis',
           description: 'AI-powered fitness tracking',
-          theme_color: '#0e0e0e',
-          background_color: '#0e0e0e',
+          theme_color: '#050501',
+          background_color: '#050501',
           display: 'standalone',
           orientation: 'portrait',
           scope: '/',
           start_url: '/',
           categories: ['health', 'fitness', 'lifestyle'],
+          // Lets the landing page ask "is Vitalis already installed?" via
+          // navigator.getInstalledRelatedApps() (Chrome Android 84+; desktop
+          // Chrome/Edge 140+ needs the absolute id). Set PWA_ORIGIN env to the
+          // deployed https origin (e.g. https://vitalis.app) for desktop.
+          related_applications: [
+            {
+              platform: 'webapp',
+              url: '/manifest.webmanifest',
+              ...(process.env.PWA_ORIGIN
+                ? { id: `${String(process.env.PWA_ORIGIN).replace(/\/+$/, '')}/` }
+                : {}),
+            },
+          ],
           shortcuts: [
             { name: 'Dashboard', url: '/dashboard' },
             { name: 'Log workout', url: '/dashboard/logs' },

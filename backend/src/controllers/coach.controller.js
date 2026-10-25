@@ -1,5 +1,6 @@
+// AI coach — thin controller. AI orchestration lives in services/coach.service.js.
 const { z } = require('zod');
-const { callGeminiWithFallback } = require('../config/gemini');
+const service = require('../services/coach.service');
 
 const WORKOUT_TYPES = ['pushup', 'squat', 'plank', 'lunge', 'bicep_curl', 'overhead', 'crunch', 'situp', 'lateral_raise', 'calfraise', 'calf_raise', 'general'];
 
@@ -11,7 +12,6 @@ const coachSchema = z.object({
   system: z.string().max(1000).optional(), // accepted but IGNORED
 }).refine((v) => v.context || v.prompt, { message: 'context or prompt is required' });
 
-const SERVER_SYSTEM = 'You are a terse, encouraging personal trainer. Reply with ONE coaching cue of 12 words or fewer. No quotes, no trailing punctuation.';
 async function post(req,res,next){
   try{
       const parsed = coachSchema.safeParse(req.body || {});
@@ -25,14 +25,8 @@ async function post(req,res,next){
       const context = (parsed.data.context || parsed.data.prompt || '').slice(0, 2000);
       if (!context.trim()) return res.status(400).json({ error: 'prompt is required' });
       try {
-        const fullPrompt = `${SERVER_SYSTEM}\n\nExercise: ${workoutType.toUpperCase()}\n${context}`;
-        const raw = await callGeminiWithFallback(fullPrompt);
-        const text = String(raw ?? '').trim();
-        // Never speak the overload fallback as a coaching cue
-        if (/high demand|currently experiencing|try again later/i.test(text)) {
-          return res.json({ text: 'Hold form, breathe steady, keep going.', degraded: true });
-        }
-        res.json({ text, degraded: false });
+        const result = await service.getCoachingCue(workoutType, context);
+        res.json(result);
       } catch (err) {
         next(err);
       }

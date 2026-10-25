@@ -1,71 +1,17 @@
-const db = require('../config/db');
-const { calcBmi, generatePlan } = require('../utils/planEngine');
+const service = require('../services/goals.service');
 const { validUserId } = require('../utils/ids');
-const { AppError } = require('../utils/errors');
 
-const GOAL_TYPES = ['LOSE_WEIGHT', 'MAINTAIN_WEIGHT', 'GAIN_WEIGHT', 'BUILD_MUSCLE', 'PERFORMANCE'];
-const SEXES = ['male', 'female', 'other'];
-const PACES = ['GRADUAL', 'MODERATE', 'FASTER', 'SLOW', 'AGGRESSIVE'];
-const ACTIVITY_LEVELS = [
-  'SEDENTARY',
-  'LIGHTLY_ACTIVE',
-  'MODERATELY_ACTIVE',
-  'VERY_ACTIVE',
-  'HIGHLY_ACTIVE',
-];
-const LEVELS = ['LOW', 'MODERATE', 'HIGH', 'GOOD'];
-
-function enumField(v, list) {
-  if (v === undefined || v === null || v === '') return { value: null };
-  const norm = String(v).trim().toUpperCase();
-  if (!list.includes(norm)) return { error: `must be one of: ${list.join(', ')}` };
-  return { value: norm };
-}
-
-function numOrNull(v, { min, max, name, integer = false }) {
-  if (v === undefined || v === null || v === '') return { value: null };
-  const n = Number(v);
-  if (!Number.isFinite(n) || n < min || n > max || (integer && !Number.isInteger(n))) {
-    return { error: `${name} must be a number ${min}–${max}` };
-  }
-  return { value: n };
-}
-
-function validDob(v) {
-  if (v === undefined || v === null || v === '') return { value: null };
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime()) || d > new Date())
-    return { error: 'dob must be a valid past date' };
-  return { value: d.toISOString().slice(0, 10) };
-}
-
-function toRecord(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    goalType: row.goal_type,
-    targetWeightKg: row.target_weight_kg != null ? Number(row.target_weight_kg) : null,
-    pace: row.pace,
-    focus: row.focus,
-    activityLevel: row.activity_level,
-    heightCm: row.height_cm != null ? Number(row.height_cm) : null,
-    weightKg: row.weight_kg != null ? Number(row.weight_kg) : null,
-    bmi: row.bmi != null ? Number(row.bmi) : null,
-    dob: row.dob,
-    sex: row.sex,
-    sleepHours: row.sleep_hours != null ? Number(row.sleep_hours) : null,
-    sleepQuality: row.sleep_quality,
-    stressLevel: row.stress_level,
-    exerciseFreq: row.exercise_freq,
-    recoveryLevel: row.recovery_level,
-    dailyKcal: row.daily_kcal != null ? Number(row.daily_kcal) : null,
-    proteinG: row.protein_g != null ? Number(row.protein_g) : null,
-    carbsG: row.carbs_g != null ? Number(row.carbs_g) : null,
-    fatG: row.fat_g != null ? Number(row.fat_g) : null,
-    status: row.status,
-    createdAt: row.created_at,
-  };
-}
+const {
+  GOAL_TYPES,
+  SEXES,
+  PACES,
+  ACTIVITY_LEVELS,
+  LEVELS,
+  enumField,
+  numOrNull,
+  validDob,
+  toRecord,
+} = service;
 
 // POST /api/goals/:userId — create (or replace) the active goal + generate plan
 async function postUserId(req, res, next) {
@@ -144,80 +90,23 @@ async function postUserId(req, res, next) {
         ? null
         : String(exerciseNorm).trim().slice(0, 20);
 
-    const plan = generatePlan({
-      weightKg: weight,
-      heightCm: height,
+    const { plan, goal: record } = await service.createGoal(userId, {
       dob: checks.dob.value,
-      sex: checks.sex.value?.toLowerCase(),
-      activityLevel: checks.activity.value,
-      goalType: goal,
+      sex: checks.sex.value,
+      height,
+      weight,
+      goal,
+      target: checks.target.value,
       pace: checks.pace.value,
+      focus: focusNorm,
+      activity: checks.activity.value,
+      sleepH: checks.sleepH.value,
+      sleepQ: checks.sleepQ.value,
+      stress: checks.stress.value,
+      exerciseFreq: exerciseFreqNorm,
+      recovery: checks.recovery.value,
     });
-
-    // Archive + insert + legacy sync must succeed or fail together —
-    // otherwise a failed insert leaves the user with zero active goals.
-    const conn = await db.getConnection();
-    let result;
-    try {
-      await conn.beginTransaction();
-      // Archive previous active goals (history preserved)
-      await conn.execute(
-        `UPDATE fitness_goals SET status = 'archived' WHERE user_id = ? AND status = 'active'`,
-        [userId]
-      );
-
-      [result] = await conn.execute(
-        `INSERT INTO fitness_goals
-           (user_id, dob, sex, height_cm, weight_kg, bmi, goal_type, target_weight_kg,
-            pace, focus, activity_level, sleep_hours, sleep_quality, stress_level,
-            exercise_freq, recovery_level, daily_kcal, protein_g, carbs_g, fat_g, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
-        [
-          userId,
-          checks.dob.value,
-          checks.sex.value?.toLowerCase() ?? null,
-          height,
-          weight,
-          plan.bmi,
-          goal,
-          checks.target.value,
-          checks.pace.value,
-          focusNorm,
-          checks.activity.value,
-          checks.sleepH.value,
-          checks.sleepQ.value,
-          checks.stress.value,
-          exerciseFreqNorm,
-          checks.recovery.value,
-          plan.dailyKcal,
-          plan.proteinG,
-          plan.carbsG,
-          plan.fatG,
-        ]
-      );
-
-      // Keep legacy surfaces in sync: users.fitness_goal + user_profiles metrics
-      await conn.execute('UPDATE users SET fitness_goal = ? WHERE id = ?', [goal, userId]);
-      await conn.execute(
-        `INSERT INTO user_profiles (user_id, height_cm, weight_kg)
-           VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE height_cm = VALUES(height_cm), weight_kg = VALUES(weight_kg)`,
-        [userId, height, weight]
-      );
-      await conn.commit();
-    } catch (txErr) {
-      try {
-        await conn.rollback();
-      } catch (_) {}
-      throw txErr;
-    } finally {
-      conn.release();
-    }
-
-    const [[row]] = await db.execute('SELECT * FROM fitness_goals WHERE id = ?', [result.insertId]);
-    if (!row)
-      throw new AppError('Goal was saved but could not be read back', 500, 'GOAL_READBACK_FAILED');
-    res.status(201).json({ success: true, plan, goal: toRecord(row) });
+    res.status(201).json({ success: true, plan, goal: record });
   } catch (e) {
     next(e);
   }
@@ -228,41 +117,13 @@ async function getactiveUserId(req, res, next) {
   try {
     const userId = validUserId(req.params.userId);
     if (!userId) return res.status(400).json({ error: 'Invalid user id' });
-    const [rows] = await db.execute(
-      `SELECT * FROM fitness_goals WHERE user_id = ? AND status = 'active'
-         ORDER BY id DESC LIMIT 1`,
-      [userId]
-    );
-    if (rows.length === 0) return res.json({ goal: null });
+    const row = await service.getActiveGoalRow(userId);
+    if (!row) return res.json({ goal: null });
 
-    const goal = toRecord(rows[0]);
+    const goal = toRecord(row);
+    const { currentWeightKg, progressPct } = await service.computeProgress(userId, goal);
 
-    // Progress: current weight = latest bmi log, else goal start weight
-    let currentWeight = goal.weightKg;
-    try {
-      const [bmiRows] = await db.execute(
-        `SELECT weight_kg FROM bmi_records WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 1`,
-        [userId]
-      );
-      const w = bmiRows.length > 0 ? Number(bmiRows[0].weight_kg) : NaN;
-      if (Number.isFinite(w) && w > 0) currentWeight = w;
-    } catch (err) {
-      console.error('[goals] BMI lookup failed:', err.message);
-    }
-
-    let progressPct = null;
-    if (
-      goal.targetWeightKg != null &&
-      goal.weightKg != null &&
-      Number.isFinite(currentWeight) &&
-      goal.targetWeightKg !== goal.weightKg
-    ) {
-      const total = Math.abs(goal.targetWeightKg - goal.weightKg);
-      const done = Math.abs(currentWeight - goal.weightKg);
-      progressPct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 100;
-    }
-
-    res.json({ goal, currentWeightKg: currentWeight, progressPct });
+    res.json({ goal, currentWeightKg, progressPct });
   } catch (e) {
     next(e);
   }
@@ -273,35 +134,12 @@ async function patchchangeUserId(req, res, next) {
   try {
     const userId = validUserId(req.params.userId);
     if (!userId) return res.status(400).json({ error: 'Invalid user id' });
-    const [rows] = await db.execute(
-      `SELECT * FROM fitness_goals WHERE user_id = ? AND status = 'active'
-         ORDER BY id DESC LIMIT 1`,
-      [userId]
-    );
-    if (rows.length === 0) {
+    const prev = await service.getActiveGoalRow(userId);
+    if (!prev) {
       // No prior goal — treat as first creation
       return postUserId(req, res, next);
     }
-    const prev = rows[0];
-    // Carry forward body profile unless the caller overrides it (never mutate req.body)
-    const carried = {
-      dob: prev.dob,
-      sex: prev.sex,
-      heightCm: prev.height_cm,
-      weightKg: prev.weight_kg,
-      goalType: prev.goal_type,
-      targetWeightKg: prev.target_weight_kg,
-      pace: prev.pace,
-      focus: prev.focus,
-      activityLevel: prev.activity_level,
-      sleepHours: prev.sleep_hours,
-      sleepQuality: prev.sleep_quality,
-      stressLevel: prev.stress_level,
-      exerciseFreq: prev.exercise_freq,
-      recoveryLevel: prev.recovery_level,
-      ...(req.body || {}),
-    };
-    const mergedReq = { ...req, body: carried };
+    const mergedReq = { ...req, body: service.carriedBody(prev, req.body) };
     return postUserId(mergedReq, res, next);
   } catch (e) {
     next(e);
@@ -319,17 +157,12 @@ async function patchActiveUserId(req, res, next) {
     if (dob === undefined && sex === undefined) {
       return res.status(400).json({ error: 'Nothing to update. Provide dob and/or sex.' });
     }
-    const [rows] = await db.execute(
-      `SELECT * FROM fitness_goals WHERE user_id = ? AND status = 'active'
-         ORDER BY id DESC LIMIT 1`,
-      [userId]
-    );
-    if (rows.length === 0) {
+    const prev = await service.getActiveGoalRow(userId);
+    if (!prev) {
       return res
         .status(404)
         .json({ error: 'No active goal. Complete onboarding first.', code: 'NO_ACTIVE_GOAL' });
     }
-    const prev = rows[0];
 
     const dobCheck = dob === undefined ? { value: prev.dob } : validDob(dob);
     if (dobCheck.error) return res.status(400).json({ error: `dob: ${dobCheck.error}` });
@@ -345,27 +178,48 @@ async function patchActiveUserId(req, res, next) {
     const dobVal = dobCheck.value ? new Date(dobCheck.value).toISOString().slice(0, 10) : null;
     const sexVal = sexCheck.value ? String(sexCheck.value).toLowerCase() : null;
 
-    const plan = generatePlan({
-      weightKg: Number(prev.weight_kg),
-      heightCm: Number(prev.height_cm),
-      dob: dobVal,
-      sex: sexVal,
-      activityLevel: prev.activity_level,
-      goalType: prev.goal_type,
-      pace: prev.pace,
-    });
-
-    await db.execute(
-      `UPDATE fitness_goals
-         SET dob = ?, sex = ?, daily_kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?
-         WHERE id = ?`,
-      [dobVal, sexVal, plan.dailyKcal, plan.proteinG, plan.carbsG, plan.fatG, prev.id]
-    );
-    const [[row]] = await db.execute('SELECT * FROM fitness_goals WHERE id = ?', [prev.id]);
-    res.json({ success: true, goal: toRecord(row) });
+    const goal = await service.updateActiveGoalIdentity(prev, dobVal, sexVal);
+    res.json({ success: true, goal });
   } catch (e) {
     next(e);
   }
 }
 
-module.exports = { postUserId, getactiveUserId, patchchangeUserId, patchActiveUserId };
+// POST /api/goals/active/:userId/recalibrate — re-derive kcal/macros from the
+// latest weigh-in (manual button; auto recalibration is threshold-gated, this
+// forces the recompute).
+async function postActiveRecalibrate(req, res, next) {
+  try {
+    const userId = validUserId(req.params.userId);
+    if (!userId) return res.status(400).json({ error: 'Invalid user id' });
+    const prev = await service.getActiveGoalRow(userId);
+    if (!prev) {
+      return res
+        .status(404)
+        .json({ error: 'No active goal. Complete onboarding first.', code: 'NO_ACTIVE_GOAL' });
+    }
+    const result = await service.recalibrateGoal(userId, { force: true });
+    if (!result.recalibrated) {
+      const reasons = {
+        NO_WEIGH_IN: 'Log your weight first — calibration needs at least one weigh-in.',
+        MISSING_PROFILE: 'Goal is missing height/sex data — re-check onboarding.',
+        ERROR: 'Recalibration failed — try again.',
+      };
+      return res.status(409).json({
+        error: reasons[result.reason] || 'Recalibration not possible right now.',
+        code: result.reason,
+      });
+    }
+    res.json({
+      success: true,
+      message: `Targets recalibrated to your latest weigh-in (${result.driftKg > 0 ? '+' : ''}${result.driftKg} kg since last calibration).`,
+      driftKg: result.driftKg,
+      plan: result.plan,
+      goal: result.goal,
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { postUserId, getactiveUserId, patchchangeUserId, patchActiveUserId, postActiveRecalibrate };

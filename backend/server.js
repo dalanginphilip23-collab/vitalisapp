@@ -38,7 +38,7 @@ try {
 }
 
 server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
+  if (/** @type {NodeJS.ErrnoException} */ (err).code === "EADDRINUSE") {
     console.error(`❌ Port ${PORT} already in use.`);
     console.error(`   netstat -ano | findstr :${PORT}`);
     console.error(`   taskkill /PID <pid> /F`);

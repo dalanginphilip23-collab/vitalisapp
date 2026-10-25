@@ -1,75 +1,153 @@
 @import 'tailwindcss';
 
+/* Bind Tailwind's `dark:` variant to the app's own theme classes.
+   Dark value: `.dark-theme` OR the `[data-theme='dark']` attribute used by the
+   always-dark auth pages; light value: everything else (incl. `.light-theme`).
+   `:where()` keeps specificity at 0 so utilities order normally. */
+@custom-variant dark (&:where(.dark-theme, .dark-theme *, [data-theme='dark'], [data-theme='dark'] *));
+
 /* Dark — deep green-black, electric lime accent (match brand reference) */
 :root,
-.dark-theme {
-  --bg-primary: #0a0e0b;
-  --bg-secondary: #0e1310;
-  --bg-tertiary: #141a15;
-  --bg-card: #141a15;
-  --bg-hover: rgba(255, 255, 255, 0.08);
-  --bg-active: rgba(124, 255, 107, 0.14);
-  --bg-overlay: rgba(4, 8, 5, 0.75);
-  --surface: #0e1310;
-  --surface-hover: #131914;
-  --surface-active: #181f18;
-  --surface-elevated: #181f18;
-  --text-primary: #f1f5f1;
-  --text-secondary: #a8c0a8;
-  --text-muted: #8fae9f;
-  --text-disabled: #5a7a6a;
-  --text-inverse: #000000;
-  --border-light: rgba(255, 255, 255, 0.1);
-  --border-medium: rgba(255, 255, 255, 0.16);
-  --border-heavy: rgba(255, 255, 255, 0.24);
-  --accent: #7cff6b;
-  --accent-dark: #43c85f;
-  --accent-light: #a8ff9b;
-  --accent-bg: rgba(124, 255, 107, 0.12);
-  --accent-border: rgba(124, 255, 107, 0.28);
-  --accent-hover: #96ff85;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 14px rgba(124, 255, 107, 0.16);
-  --glass-bg: rgba(16, 24, 17, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-highlight: rgba(255, 255, 255, 0.08);
-  --glass-orb-1: rgba(124, 255, 107, 0.2);
-  --glass-orb-2: rgba(46, 120, 60, 0.4);
-  --glass-orb-3: rgba(168, 255, 155, 0.12);
-  --input-bg: #141a15;
-  --input-border: rgba(255, 255, 255, 0.14);
-  --input-focus: rgba(124, 255, 107, 0.25);
-  --input-placeholder: #6e8a7a;
-  --nav-bg: #131914;
-  --nav-fg: #7cff6b;
-  --nav-fg-muted: #6e8a7a;
+.dark-theme,
+[data-theme='dark'] {
+  /* ── Surfaces: deep near-black green → forest card → elevated ── */
+  --bg-primary: #0d110c;
+  /* Ambient page wash — barely-there green light for depth (stronger in light) */
+  --app-bg:
+    radial-gradient(1100px 680px at 84% -14%, rgba(199, 244, 100, 0.1), transparent 60%),
+    radial-gradient(900px 620px at -12% 4%, rgba(103, 214, 109, 0.1), transparent 62%);
+  --bg-secondary: #141a12;
+  --bg-tertiary: #1b2318;
+  --bg-card: #141a12;
+  --bg-elevated: #202a1b;
+  --bg-hover: rgba(241, 245, 234, 0.055);
+  --bg-active: rgba(199, 244, 100, 0.14);
+  --bg-overlay: rgba(13, 17, 12, 0.8);
+  --surface: #141a12;
+  --surface-hover: #1b2318;
+  --surface-active: #202a1b;
+  --surface-elevated: #202a1b;
+
+  /* ── Text: warm off-white greens ── */
+  --text-primary: #f1f5ea;
+  --text-secondary: #bac5b1;
+  --text-muted: #8e9a86;
+  --text-disabled: #5f6b58;
+  --text-inverse: #182110;
+
+  /* ── Borders: subtle dark green ── */
+  --border-light: rgba(43, 56, 38, 0.7);
+  --border-medium: #2b3826;
+  --border-heavy: #3a4e36;
+  --border-olive: rgba(60, 82, 51, 0.4);
+
+  /* ── Accent: soft athletic lime ── */
+  --accent: #c7f464;
+  --accent-dark: #a9d44a;
+  --accent-light: #d5ff85;
+  --accent-bg: #2a391f;
+  --accent-border: rgba(199, 244, 100, 0.3);
+  --accent-hover: #d5ff85;
+
+  /* ── Secondary green — fresh natural green + deep emerald ── */
+  --accent-2: #67d66d;
+  --accent-2-bg: rgba(103, 214, 109, 0.12);
+  --accent-2-border: rgba(103, 214, 109, 0.3);
+  --emerald: #2e7d46;
+  --emerald-bg: rgba(46, 125, 70, 0.16);
+  --olive: #3c5233;
+  --olive-bg: rgba(60, 82, 51, 0.18);
+  --olive-border: rgba(60, 82, 51, 0.4);
+
+  /* ── Shadows: soft, low-contrast ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 0 1px rgba(199, 244, 100, 0.14), 0 8px 30px rgba(199, 244, 100, 0.1);
+
+  /* ── Glass ── */
+  --glass-bg: rgba(20, 26, 18, 0.72);
+  --glass-border: rgba(43, 56, 38, 0.6);
+  --glass-highlight: rgba(241, 245, 234, 0.05);
+  --glass-orb-1: rgba(199, 244, 100, 0.14);
+  --glass-orb-2: rgba(60, 82, 51, 0.35);
+  --glass-orb-3: rgba(103, 214, 109, 0.12);
+
+  /* ── Inputs ── */
+  --input-bg: #0d110c;
+  --input-border: rgba(43, 56, 38, 0.9);
+  --input-focus: rgba(199, 244, 100, 0.3);
+  --input-placeholder: #6e7a6c;
+
+  /* ── Navigation ── */
+  --nav-bg: #141a12;
+  --nav-fg: #c7f464;
+  --nav-fg-muted: #8e9a86;
+
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.15);
-  --success: #7cff6b;
-  --success-bg: rgba(124, 255, 107, 0.12);
-  --error: #f87171;
-  --error-bg: rgba(248, 113, 113, 0.15);
-  --warning: #fde68a;
-  --warning-bg: rgba(253, 230, 138, 0.1);
-  --info: #93c5fd;
-  --info-bg: rgba(147, 197, 253, 0.1);
+  --scrollbar-thumb: rgba(241, 245, 234, 0.1);
+  --scrollbar-thumb-hover: rgba(241, 245, 234, 0.18);
+
+  /* ── Status ── */
+  --success: #67d66d;
+  --success-bg: rgba(103, 214, 109, 0.12);
+  --error: #ff6b5e;
+  --error-bg: rgba(255, 107, 94, 0.14);
+  --warning: #f0c34d;
+  --warning-bg: rgba(240, 195, 77, 0.12);
+  --warning-border: rgba(240, 195, 77, 0.32);
+  --info: #8fb8ff;
+  --info-bg: rgba(143, 184, 255, 0.12);
+
+  /* ── Charts (Analytics) ── */
+  --chart-1: #c7f464;
+  --chart-2: #67d66d;
+  --chart-3: #8fb8ff;
+  --chart-4: #f0c34d;
+  --chart-5: #ff8a65;
+
+  /* ── Typography: native OS system stack (no webfonts → instant + native) ── */
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Manrope', sans-serif;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 14px;
-  --text-lg: 16px;
-  --text-xl: 19px;
-  --text-2xl: 23px;
-  --leading-tight: 1.1;
-  --leading-normal: 1.5;
+  --text-xs: clamp(12px, 0.72rem + 0.15vw, 13px);
+  --text-sm: clamp(13px, 0.78rem + 0.18vw, 14px);
+  --text-base: clamp(15px, 0.88rem + 0.25vw, 16.5px);
+  --text-lg: clamp(16px, 0.95rem + 0.35vw, 18px);
+  --text-xl: clamp(19px, 1.05rem + 0.55vw, 21px);
+  --text-2xl: clamp(22px, 1.2rem + 0.9vw, 26px);
+  --text-3xl: clamp(25px, 1.35rem + 1.4vw, 31px);
+
+  /* ── Spacing scale (4px base) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: clamp(11px, 0.68rem + 0.12vw, 12px);
+  --space-4: clamp(15px, 0.88rem + 0.2vw, 16px);
+  --space-5: clamp(18px, 1.05rem + 0.3vw, 20px);
+  --space-6: clamp(21px, 1.25rem + 0.4vw, 24px);
+  --space-8: clamp(28px, 1.65rem + 0.55vw, 32px);
+  --space-10: clamp(34px, 2rem + 0.75vw, 40px);
+  --space-12: clamp(40px, 2.35rem + 1vw, 48px);
+
+  /* ── Radii ── */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.55;
   --tracking-tight: -0.02em;
-  --tracking-wide: 0.08em;
+  --tracking-wide: 0.06em;
   --tracking-widest: 0.12em;
+
+  /* ── Layout ── */
+  --sidebar-w-collapsed: 80px;
+  --sidebar-w-expanded: 240px;
+  --topbar-h: 56px;
+  --content-max: 1200px;
+
   --z-nav: 40;
   --z-topbar: 60;
   --z-modal: 100;
@@ -79,77 +157,138 @@
   --duration-fast: 150ms;
   --duration-normal: 250ms;
   --duration-slow: 400ms;
+  --duration-sidebar: 220ms;
   --touch-target: 44px;
 }
 
 .light-theme {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f6f7f9;
-  --bg-tertiary: #eef1f4;
+  /* ── Light-green surfaces — layered & tinted so cards lift off the page ── */
+  --bg-primary: #f5f7f1;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #edf2e8;
   --bg-card: #ffffff;
-  --bg-hover: rgba(16, 24, 40, 0.05);
-  --bg-active: rgba(46, 82, 51, 0.08);
-  --bg-overlay: rgba(16, 24, 40, 0.45);
+  --bg-elevated: #ffffff;
+  --bg-hover: rgba(26, 36, 25, 0.05);
+  --bg-active: rgba(52, 122, 43, 0.14);
+  --bg-overlay: rgba(16, 22, 16, 0.45);
   --surface: #ffffff;
-  --surface-hover: #f6f7f9;
-  --surface-active: #eef1f4;
+  --surface-hover: #edf2e8;
+  --surface-active: #e7f3de;
   --surface-elevated: #ffffff;
-  --text-primary: #101828;
-  --text-secondary: #344054;
-  --text-muted: #667085;
-  --text-disabled: #98a2b3;
+  /* Layered ambient wash — keeps the light theme from reading as flat green */
+  --app-bg:
+    radial-gradient(1000px 640px at 86% -14%, rgba(52, 122, 43, 0.12), transparent 60%),
+    radial-gradient(860px 600px at -10% 4%, rgba(103, 214, 109, 0.18), transparent 62%),
+    linear-gradient(180deg, #f7faf4 0%, #edf2e8 100%);
+
+  --text-primary: #1a2419;
+  --text-secondary: #566252;
+  --text-muted: #66705e;
+  --text-disabled: #9aa596;
   --text-inverse: #ffffff;
-  --border-light: rgba(16, 24, 40, 0.08);
-  --border-medium: rgba(16, 24, 40, 0.14);
-  --border-heavy: rgba(16, 24, 40, 0.22);
-  --accent: #2e5233;
-  --accent-dark: #1f3a24;
-  --accent-light: #4a7a52;
-  --accent-bg: rgba(46, 82, 51, 0.1);
-  --accent-border: rgba(46, 82, 51, 0.24);
-  --accent-hover: #244127;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 2px 8px rgba(16, 24, 40, 0.07);
-  --shadow-lg: 0 4px 16px rgba(16, 24, 40, 0.08);
-  --shadow-xl: 0 8px 24px rgba(16, 24, 40, 0.1);
-  --shadow-glow: 0 0 14px rgba(46, 82, 51, 0.16);
-  --glass-bg: rgba(255, 255, 255, 0.62);
-  --glass-border: rgba(16, 24, 40, 0.08);
+
+  --border-light: rgba(26, 36, 25, 0.1);
+  --border-medium: #dfe6d9;
+  --border-heavy: #c9d3c0;
+  --border-olive: rgba(52, 122, 43, 0.28);
+
+  /* Lime is unreadable on white — use a clean emerald for contrast */
+  --accent: #347a2b;
+  --accent-dark: #286520;
+  --accent-light: #3e8f33;
+  --accent-bg: #e7f3de;
+  --accent-border: rgba(52, 122, 43, 0.25);
+  --accent-hover: #286520;
+
+  /* ── Secondary green ── */
+  --accent-2: #238c48;
+  --accent-2-bg: rgba(35, 140, 72, 0.1);
+  --accent-2-border: rgba(35, 140, 72, 0.28);
+  --emerald: #238c48;
+  --emerald-bg: rgba(35, 140, 72, 0.1);
+  --olive: #238c48;
+  --olive-bg: rgba(35, 140, 72, 0.1);
+  --olive-border: rgba(35, 140, 72, 0.28);
+
+  --shadow-sm: 0 1px 2px rgba(26, 36, 25, 0.06), 0 1px 3px rgba(26, 36, 25, 0.05);
+  --shadow-md: 0 6px 20px rgba(26, 36, 25, 0.09), 0 1px 2px rgba(26, 36, 25, 0.05);
+  --shadow-lg: 0 16px 40px rgba(26, 36, 25, 0.14);
+  --shadow-xl: 0 26px 64px rgba(26, 36, 25, 0.18);
+  --shadow-glow: 0 0 0 1px rgba(52, 122, 43, 0.16), 0 10px 28px rgba(52, 122, 43, 0.16);
+
+  --glass-bg: rgba(255, 255, 255, 0.74);
+  --glass-border: rgba(16, 22, 16, 0.08);
   --glass-highlight: rgba(255, 255, 255, 0.65);
-  --glass-orb-1: rgba(46, 82, 51, 0.14);
-  --glass-orb-2: rgba(74, 122, 82, 0.12);
-  --glass-orb-3: rgba(122, 184, 138, 0.16);
+  --glass-orb-1: rgba(52, 122, 43, 0.12);
+  --glass-orb-2: rgba(35, 140, 72, 0.12);
+  --glass-orb-3: rgba(103, 214, 109, 0.14);
+
   --input-bg: #ffffff;
-  --input-border: rgba(16, 24, 40, 0.16);
-  --input-focus: rgba(46, 82, 51, 0.25);
-  --input-placeholder: #98a2b3;
-  --nav-bg: #2e5233;
-  --nav-fg: #ffffff;
-  --nav-fg-muted: #d6e4d6;
+  --input-border: rgba(26, 36, 25, 0.18);
+  --input-focus: rgba(52, 122, 43, 0.22);
+  --input-placeholder: #93a08f;
+
+  --nav-bg: #ffffff;
+  --nav-fg: #347a2b;
+  --nav-fg-muted: #66705e;
+
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(46, 82, 51, 0.18);
-  --scrollbar-thumb-hover: rgba(46, 82, 51, 0.28);
-  --success: #2e5233;
-  --success-bg: rgba(22, 163, 74, 0.08);
+  --scrollbar-thumb: rgba(16, 22, 16, 0.16);
+  --scrollbar-thumb-hover: rgba(16, 22, 16, 0.26);
+
+  --success: #1f7a3d;
+  --success-bg: rgba(31, 122, 61, 0.1);
   --error: #dc2626;
   --error-bg: rgba(220, 38, 38, 0.1);
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.1);
-  --info: #3b82f6;
-  --info-bg: rgba(59, 130, 246, 0.08);
+  --warning: #b45309;
+  --warning-bg: rgba(180, 83, 9, 0.1);
+  --info: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.08);
+
+  /* ── Charts ── */
+  --chart-1: #347a2b;
+  --chart-2: #1f7a3d;
+  --chart-3: #2563eb;
+  --chart-4: #b45309;
+  --chart-5: #dc2626;
+
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Manrope', sans-serif;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 14px;
-  --text-lg: 16px;
-  --text-xl: 19px;
-  --text-2xl: 23px;
-  --leading-tight: 1.1;
-  --leading-normal: 1.5;
+  --text-xs: clamp(12px, 0.72rem + 0.15vw, 13px);
+  --text-sm: clamp(13px, 0.78rem + 0.18vw, 14px);
+  --text-base: clamp(15px, 0.88rem + 0.25vw, 16.5px);
+  --text-lg: clamp(16px, 0.95rem + 0.35vw, 18px);
+  --text-xl: clamp(19px, 1.05rem + 0.55vw, 21px);
+  --text-2xl: clamp(22px, 1.2rem + 0.9vw, 26px);
+  --text-3xl: clamp(25px, 1.35rem + 1.4vw, 31px);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: clamp(11px, 0.68rem + 0.12vw, 12px);
+  --space-4: clamp(15px, 0.88rem + 0.2vw, 16px);
+  --space-5: clamp(18px, 1.05rem + 0.3vw, 20px);
+  --space-6: clamp(21px, 1.25rem + 0.4vw, 24px);
+  --space-8: clamp(28px, 1.65rem + 0.55vw, 32px);
+  --space-10: clamp(34px, 2rem + 0.75vw, 40px);
+  --space-12: clamp(40px, 2.35rem + 1vw, 48px);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.55;
   --tracking-tight: -0.02em;
-  --tracking-wide: 0.08em;
+  --tracking-wide: 0.06em;
   --tracking-widest: 0.12em;
+
+  --sidebar-w-collapsed: 80px;
+  --sidebar-w-expanded: 240px;
+  --topbar-h: 56px;
+  --content-max: 1200px;
+
   --z-nav: 40;
   --z-topbar: 60;
   --z-modal: 100;
@@ -159,7 +298,40 @@
   --duration-fast: 150ms;
   --duration-normal: 250ms;
   --duration-slow: 400ms;
+  --duration-sidebar: 220ms;
   --touch-target: 44px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Fluid type scale — theme-independent, viewport-adaptive.
+   Powers the `text-[length:var(--fs-N)]` utilities so copy scales
+   smoothly between small and large screens instead of being frozen.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --fs-8: clamp(10px, 0.58rem + 0.15vw, 11px);
+  --fs-9: clamp(10.5px, 0.61rem + 0.15vw, 11.5px);
+  --fs-10: clamp(11px, 0.64rem + 0.16vw, 12px);
+  --fs-11: clamp(11.5px, 0.67rem + 0.17vw, 12.5px);
+  --fs-12: clamp(12px, 0.7rem + 0.18vw, 13px);
+  --fs-13: clamp(13px, 0.76rem + 0.18vw, 14px);
+  --fs-14: clamp(14px, 0.82rem + 0.2vw, 15px);
+  --fs-15: clamp(15px, 0.88rem + 0.22vw, 16px);
+  --fs-16: clamp(16px, 0.94rem + 0.24vw, 17px);
+  --fs-17: clamp(17px, 1rem + 0.26vw, 18px);
+  --fs-18: clamp(18px, 1.05rem + 0.3vw, 19.5px);
+  --fs-19: clamp(19px, 1.1rem + 0.32vw, 20.5px);
+  --fs-20: clamp(20px, 1.15rem + 0.4vw, 22px);
+  --fs-21: clamp(21px, 1.2rem + 0.4vw, 23px);
+  --fs-22: clamp(22px, 1.25rem + 0.5vw, 24px);
+  --fs-24: clamp(24px, 1.35rem + 0.6vw, 27px);
+  --fs-26: clamp(26px, 1.45rem + 0.7vw, 29px);
+  --fs-28: clamp(28px, 1.55rem + 0.9vw, 32px);
+  --fs-32: clamp(30px, 1.75rem + 1.2vw, 36px);
+  --fs-36: clamp(33px, 1.95rem + 1.5vw, 40px);
+  --fs-40: clamp(36px, 2.1rem + 1.8vw, 45px);
+  --fs-48: clamp(40px, 2.35rem + 2.4vw, 54px);
+  --fs-56: clamp(44px, 2.6rem + 3vw, 62px);
+  --fs-110: clamp(68px, 4.6rem + 8vw, 118px);
 }
 
 /* Smooth transitions for theme switching — minimal: only color/border/bg (no transform/opacity globally) */
@@ -194,17 +366,30 @@
   }
 }
 
-/* Focus visible for keyboard navigation — uses accent ring with token */
+/* Keyboard focus ring for links, buttons and other non-field controls. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ── Textboxes: remove the harsh, offset browser outline everywhere ──────
+   The global :focus-visible rule above is unlayered, so it used to beat
+   Tailwind's `outline-none` utility (which lives in a lower-priority layer)
+   and every field showed an ugly 2px outline floating 2px away from its
+   rounded edge. These higher-specificity rules win instead. */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
 }
 
 /* Apply theme variables to body */
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Scrollbar styling */
@@ -237,15 +422,59 @@ body {
 }
 
 @layer base {
+  /* The app's theme typeface, applied to EVERY element so all pages use the
+     same font (Inter for UI; Manrope / Bebas Neue for display headings via
+     their utility classes / --font-display). */
   * {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
   }
 
-  :root {
-    --primary-fixed: #0f2a0f;
-    --surface: #0f2a0f;
-    --on-surface: #ffffff;
-    --outline-variant: #2f4d2f;
+  html {
+    /* Stop iOS from auto-inflating / re-flowing text; let our scale control it. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Form controls inherit the app font instead of the browser default. */
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  /* Themed default skin for any text field that doesn't bring its own —
+     guarantees no control can ever fall back to the browser's default
+     border/background. At this layer Tailwind utilities (bg-transparent,
+     border-0, rounded-*, focus:ring-*, focus:shadow-none) still win. */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']),
+  textarea,
+  select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+  }
+
+  /* Focus = soft halo that follows each field's own border-radius, so it
+     always matches the rounded shape of the control (or its pill parent). */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--input-focus);
+  }
+  input[aria-invalid='true']:focus,
+  textarea[aria-invalid='true']:focus,
+  select[aria-invalid='true']:focus {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px var(--error-bg);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--input-placeholder);
+    opacity: 1;
   }
 }
 
@@ -431,9 +660,13 @@ canvas {
 canvas.chartjs-render-monitor {
   max-width: 100% !important;
 }
-/* Long headings wrap balanced instead of overflowing 320px screens */
-h1,
-h2 {
+/* Long headings wrap balanced instead of overflowing 320px screens.
+   Skip headings that opt into single-line truncation: `text-wrap` is a
+   shorthand for `text-wrap-mode`, so the unlayered `balance` here would
+   beat Tailwind's layered `white-space: nowrap` from `.truncate` and make
+   long titles wrap into the header controls. */
+h1:not(.truncate),
+h2:not(.truncate) {
   text-wrap: balance;
   overflow-wrap: break-word;
 }
@@ -615,6 +848,17 @@ select:disabled {
 }
 
 .animate-ping-slow {
+  animation: ping-slow 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* Shared theme-toggle ripple (components/ThemeToggle.jsx variants). */
+.nn-theme-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.2;
+  pointer-events: none;
   animation: ping-slow 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
 }
 
@@ -825,4 +1069,323 @@ button.btn-is-busy,
 button[data-loading='true'] {
   position: relative;
   cursor: wait;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Vitalis design system — typography · containers · surfaces · motion
+   Reusable tokens so pages share one design language without forcing
+   identical layouts. Used by shared components + redesigned pages.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Typography scale ── */
+.t-page-title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.1;
+}
+.t-section {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.t-card-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.t-body {
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+.t-secondary {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+.t-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.t-metric {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.05;
+}
+.t-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-muted);
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .t-page-title {
+    font-size: 25px;
+  }
+  .t-metric {
+    font-size: 26px;
+  }
+}
+
+/* ── Page containers ── */
+.page-container {
+  width: 100%;
+  margin-inline: auto;
+  max-width: var(--content-max);
+  padding-inline: var(--space-4);
+}
+@media (min-width: 768px) {
+  .page-container {
+    padding-inline: var(--space-6);
+  }
+}
+@media (min-width: 1024px) {
+  .page-container {
+    padding-inline: var(--space-8);
+  }
+}
+.page-container-narrow {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 760px;
+  padding-inline: var(--space-4);
+}
+@media (min-width: 768px) {
+  .page-container-narrow {
+    padding-inline: var(--space-6);
+  }
+}
+
+/* ── Card surfaces ── */
+/* NOTE: there is intentionally NO global `.v-card` rule here. The Auth pages
+   define their own `.v-card` (animation only) and supply their own dark glass
+   background via a utility (`bg-[#121210]/65`). A global `.v-card` here was
+   unlayered, so it beat that utility and turned the auth card white. */
+
+/* ── Motion ── */
+@keyframes v-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes v-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes v-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-page {
+  animation: v-fade-up var(--duration-slow) var(--ease-default) both;
+}
+.animate-page-in {
+  animation: v-fade-in var(--duration-normal) var(--ease-default) both;
+}
+.animate-stagger > * {
+  animation: v-fade-up var(--duration-slow) var(--ease-default) both;
+}
+.animate-stagger > *:nth-child(1) {
+  animation-delay: 0.03s;
+}
+.animate-stagger > *:nth-child(2) {
+  animation-delay: 0.07s;
+}
+.animate-stagger > *:nth-child(3) {
+  animation-delay: 0.11s;
+}
+.animate-stagger > *:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.animate-stagger > *:nth-child(5) {
+  animation-delay: 0.19s;
+}
+.animate-stagger > *:nth-child(6) {
+  animation-delay: 0.23s;
+}
+.animate-stagger > *:nth-child(7) {
+  animation-delay: 0.27s;
+}
+.animate-stagger > *:nth-child(8) {
+  animation-delay: 0.31s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   Card variants — dashboard / plan redesign (mobile-first)
+   Scoped utilities only; every color comes from existing CSS variables so the
+   dark / light theme stays untouched. No new theme tokens are introduced.
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Featured image-led card: image + content stacked on mobile,
+   side-by-side on desktop. Heights are viewport-responsive so the
+   image never dominates the layout. */
+.v-card-featured {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+.v-card-media {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.v-card-media img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  filter: brightness(0.78);
+  max-height: clamp(140px, 20vh, 260px);
+}
+.v-card-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(13, 17, 12, 0.45) 0%,
+    rgba(13, 17, 12, 0.85) 100%
+  );
+  pointer-events: none;
+}
+.v-card-featured .v-card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tablet: keep stacked but allow a slightly taller image. */
+@media (min-width: 768px) {
+  .v-card-media img {
+    max-height: clamp(180px, 24vh, 300px);
+  }
+}
+
+/* Desktop: side-by-side image and content, equal heights via stretch. */
+@media (min-width: 1024px) {
+  .v-card-featured {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .v-card-media {
+    width: 42%;
+    min-height: 220px;
+  }
+  .v-card-media img {
+    height: 100%;
+    max-height: none;
+  }
+  .v-card-featured .v-card-content {
+    width: 58%;
+    padding: var(--space-5);
+  }
+}
+
+/* Mobile: compact image so text and actions stay within reach. */
+@media (max-width: 480px) {
+  .v-card-media img {
+    max-height: clamp(120px, 16vh, 180px);
+  }
+  .v-card-featured {
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Compact metric card — flex column so mt-auto anchors the progress bar
+   to the bottom; padding/radius match MiniCard for uniform stat rows. */
+.v-card-compact {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+/* Horizontal card — image left, content right on wide viewports; stacked
+   on narrow screens via the .v-card-horizontal--stack modifier. */
+.v-card-horizontal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+.v-card-horizontal .v-card-image {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+.v-card-horizontal .v-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+@media (max-width: 640px) {
+  .v-card-horizontal--stack {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+  .v-card-horizontal--stack .v-card-image {
+    width: 100%;
+    height: 140px;
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Fixed-aspect image stage for featured cards — prevents layout shift. */
+.v-image-stage {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+.v-image-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }

@@ -1,5 +1,5 @@
-
-const db = require('../config/db');
+// Sleep logs — thin controller. Logic + DB live in services/sleep.service.js.
+const sleepService = require('../services/sleep.service');
 const { validUserId } = require('../utils/ids');
 
 function numField(v, { min = 0, max = 100, name }) {
@@ -31,24 +31,14 @@ async function postUserId(req,res,next){
         return res.status(400).json({ error: 'At least one of sleep_duration, sleep_quality, recovery_score, water_intake_ml is required' });
       }
     
-      try {
-        await db.execute(
-          `INSERT INTO sleep_logs 
-          (user_id, sleep_duration, sleep_quality, recovery_score, water_intake_ml)
-          VALUES (?, ?, ?, ?, ?)`,
-          [
-            userId,
-            duration.value,
-            quality.value,
-            recovery.value,
-            water.value
-          ]
-        );
+      await sleepService.saveSleepLog(userId, {
+        sleepDuration: duration.value,
+        sleepQuality: quality.value,
+        recoveryScore: recovery.value,
+        waterIntakeMl: water.value,
+      });
     
-        res.json({ success: true });
-      } catch (err) {
-        next(err);
-      }
+      res.json({ success: true });
   }catch(e){ next(e); }
 }
 
@@ -57,22 +47,7 @@ async function getUserIdToday(req,res,next){
         const userId = validUserId(req.params.userId);
         if (!userId) return res.status(400).json({ error: 'Invalid user id' });
     
-        try {
-        const [rows] = await db.execute(
-        `SELECT sleep_duration, sleep_quality, recovery_score, water_intake_ml, recorded_at
-         FROM sleep_logs
-         WHERE user_id = ?
-         AND (sleep_duration > 0 OR sleep_quality > 0 OR water_intake_ml > 0 OR recovery_score > 0)
-         ORDER BY recorded_at DESC
-         LIMIT 1`,
-        [userId]
-    );
-    
-            res.json(rows[0] || null);
-    
-        } catch (err) {
-            next(err);
-        }
+        res.json(await sleepService.getLatestToday(userId));
   }catch(e){ next(e); }
 }
 
@@ -83,43 +58,8 @@ async function getUserId(req,res,next){
         const range = String(req.query?.range ?? 'D').toUpperCase();
         const metric = String(req.query?.metric ?? 'duration').toLowerCase();
         if (!['D', 'W', 'M'].includes(range)) return res.status(400).json({ error: 'range must be D, W, or M' });
-        const interval = range === 'W' ? '7 DAY' : range === 'M' ? '30 DAY' : '1 DAY';
-        const METRIC_MAP = { duration: 'sleep_duration', quality: 'sleep_quality', recovery: 'recovery_score' };
-        const column = METRIC_MAP[metric] ?? 'sleep_duration';
     
-        try {
-            const isDaily = range === 'D';
-            const labelFormat   = isDaily ? '%H:%i' : '%m/%d';
-            // Daily: one row per log (no GROUP BY — grouping by raw timestamp
-            // explodes under ONLY_FULL_GROUP_BY). W/M: daily averages.
-            const [rows] = isDaily
-              ? await db.execute(
-                `SELECT DATE_FORMAT(recorded_at, '${labelFormat}') AS label,
-                        ${column} AS value
-                 FROM sleep_logs
-                 WHERE user_id = ?
-                   AND recorded_at >= DATE_SUB(NOW(), INTERVAL ${interval})
-                   AND ${column} > 0
-                 ORDER BY recorded_at ASC
-                 LIMIT 1000`,
-                [userId]
-              )
-              : await db.execute(
-                `SELECT DATE_FORMAT(recorded_at, '${labelFormat}') AS label,
-                        AVG(${column}) AS value
-                 FROM sleep_logs
-                 WHERE user_id = ?
-                   AND recorded_at >= DATE_SUB(NOW(), INTERVAL ${interval})
-                   AND ${column} > 0
-                 GROUP BY DATE(recorded_at)
-                 ORDER BY DATE(recorded_at) ASC
-                 LIMIT 1000`,
-                [userId]
-              );
-            res.json(rows);
-        } catch (err) {
-            next(err);
-        }
+        res.json(await sleepService.getSeries(userId, range, metric));
   }catch(e){ next(e); }
 }
 
@@ -131,34 +71,8 @@ async function getUserIdAnalysis(req,res,next){
         const metric = String(req.query?.metric ?? 'sleep_hours').toLowerCase();
         if (!['D', 'W', 'M'].includes(range)) return res.status(400).json({ error: 'range must be D, W, or M' });
     
-        const ANALYSIS_MAP = {
-            sleep_hours:    'sleep_duration',
-            recovery_score: 'recovery_score',
-            efficiency:     'sleep_quality',
-        };
-    
-        const column   = ANALYSIS_MAP[metric] || 'sleep_duration';
-        const interval = range === 'W' ? '7 DAY' : range === 'M' ? '30 DAY' : '1 DAY';
-    
         try {
-            const isDaily     = range === 'D';
-            const labelFormat = isDaily ? '%H:%i' : (range === 'W' ? '%a' : '%m/%d');
-    
-            // GROUP BY the same expression as the label — grouping by
-            // HOUR() while selecting %H:%i breaks under ONLY_FULL_GROUP_BY.
-            const groupExpr = isDaily ? "DATE_FORMAT(recorded_at, '%Y-%m-%d %H')" : 'DATE(recorded_at)';
-            const [rows] = await db.execute(
-                `SELECT DATE_FORMAT(recorded_at, '${labelFormat}') AS label, 
-                        AVG(${column}) AS value
-                 FROM sleep_logs
-                 WHERE user_id = ? 
-                   AND recorded_at >= DATE_SUB(NOW(), INTERVAL ${interval})
-                 GROUP BY ${groupExpr}
-                 ORDER BY MIN(recorded_at) ASC
-                 LIMIT 1000`,
-                [userId]
-            );
-            res.json(rows);
+            res.json(await sleepService.getAnalysis(userId, range, metric));
         } catch (err) {
             console.error('[Analysis Graph] Error:', err.message);
             next(err);
@@ -172,33 +86,12 @@ async function getUserIdScatter(req,res,next){
         if (!userId) return res.status(400).json({ error: 'Invalid user id' });
         const timeframe = String(req.query?.timeframe ?? 'weekly').toLowerCase();
     
-        const intervalMap = {
-            weekly:    '7 DAY',
-            monthly:   '30 DAY',
-            quarterly: '90 DAY',
-        };
-        if (!Object.prototype.hasOwnProperty.call(intervalMap, timeframe)) {
+        if (!['weekly', 'monthly', 'quarterly'].includes(timeframe)) {
           return res.status(400).json({ error: 'timeframe must be weekly, monthly, or quarterly' });
         }
-        const interval = intervalMap[timeframe];
     
         try {
-            const [rows] = await db.execute(
-                `SELECT 
-                   sleep_duration,
-                   sleep_quality,
-                   recovery_score,
-                   DATE_FORMAT(recorded_at, '%Y-%m-%d %H:%i') AS recorded_at
-                 FROM sleep_logs
-                  WHERE user_id = ?
-                    AND recorded_at >= DATE_SUB(NOW(), INTERVAL ${interval})
-                    AND sleep_duration > 0
-                    AND sleep_quality  > 0
-                  ORDER BY recorded_at ASC
-                  LIMIT 1000`,
-                [userId]
-            );
-            res.json(rows);
+            res.json(await sleepService.getScatter(userId, timeframe));
         } catch (err) {
             console.error('[Scatter] Error:', err.message);
             next(err);

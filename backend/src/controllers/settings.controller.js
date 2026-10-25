@@ -1,9 +1,8 @@
-const db = require('../config/db');
+// Settings — thin controller. Logic + DB live in services/settings.service.js.
+const service = require('../services/settings.service');
 const { z } = require('zod');
 
-const ALLOWED_UNITS = ['metric', 'imperial'];
-const ALLOWED_THEMES = ['light', 'dark', 'system'];
-const DEFAULTS = { units: 'metric', step_goal: 8000, theme: 'system' };
+const { ALLOWED_UNITS, ALLOWED_THEMES, DEFAULTS } = service;
 
 const putSettingsSchema = z.object({
   units: z.enum(ALLOWED_UNITS).optional(),
@@ -16,10 +15,7 @@ const putSettingsSchema = z.object({
 // GET /api/settings — JWT user only (no :userId, avoids IDOR by design)
 async function get(req, res, next) {
   try {
-    const [rows] = await db.execute(
-      'SELECT units, step_goal, theme FROM user_settings WHERE user_id=?',
-      [req.user.id]
-    );
+    const rows = await service.getSettings(req.user.id);
     if (!rows.length) return res.json({ settings: { ...DEFAULTS } });
     res.json({ settings: rows[0] });
   } catch (e) { next(e); }
@@ -29,19 +25,8 @@ async function get(req, res, next) {
 async function put(req, res, next) {
   try {
     const { units, step_goal, theme } = req.body;
-    const [existing] = await db.execute('SELECT units, step_goal, theme FROM user_settings WHERE user_id=?', [req.user.id]);
-    const cur = existing[0] || DEFAULTS;
-
-    const nextUnits = units === undefined ? cur.units : units;
-    const nextGoal = step_goal === undefined ? Number(cur.step_goal) : Number(step_goal);
-    const nextTheme = theme === undefined ? cur.theme : theme;
-
-    await db.execute(
-      `INSERT INTO user_settings (user_id, units, step_goal, theme) VALUES (?,?,?,?)
-       ON DUPLICATE KEY UPDATE units=VALUES(units), step_goal=VALUES(step_goal), theme=VALUES(theme), updated_at=NOW()`,
-      [req.user.id, nextUnits, nextGoal, nextTheme]
-    );
-    res.json({ success: true, settings: { units: nextUnits, step_goal: nextGoal, theme: nextTheme } });
+    const settings = await service.upsertSettings(req.user.id, { units, step_goal, theme });
+    res.json({ success: true, settings });
   } catch (e) { next(e); }
 }
 

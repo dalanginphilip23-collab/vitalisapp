@@ -1,0 +1,20 @@
+{
+  "name": "vitalisapp",
+  "version": "1.0.0",
+  "description": "Fitness tracking with AI coaching — workout logging, nutrition and food scanning,\r sleep tracking, plans, community, messaging, and analytics in one monorepo.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalisapp/vitalisapp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vitalisapp/vitalisapp/issues"
+  },
+  "homepage": "https://github.com/vitalisapp/vitalisapp#readme"
+}

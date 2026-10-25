@@ -1,0 +1,2619 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Meal Tracker — scoped nutrition UI.
+   Reference: Calorie Counter & Health App UI Concept (Farhan).
+   Everything here is namespaced under .meal-tracker so no other page,
+   shell component or global theme token is affected.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.vapp .app-container.meal-tracker {
+  max-width: 1240px;
+}
+
+.meal-tracker {
+  /* Reference palette, adapted to the existing Vitalis theme. */
+  --mt-ink: #080806;
+  --mt-ink-contrast: #ffffff;
+  --mt-strong-bg: var(--accent);
+  --mt-strong-fg: #ffffff;
+  --mt-paper: #f1f1f2;
+  --mt-card: var(--bg-card);
+  --mt-soft: color-mix(in srgb, var(--bg-card) 78%, var(--mt-paper));
+  --mt-soft-strong: color-mix(in srgb, var(--bg-card) 62%, var(--mt-paper));
+  --mt-line: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  --mt-line-strong: color-mix(in srgb, var(--text-primary) 14%, transparent);
+  --mt-blue: #b1c4d0;
+  --mt-blue-strong: #587687;
+  --mt-brown: #594b30;
+  --mt-lavender: #9385a2;
+  --mt-lavender-strong: #705e80;
+  --mt-beige: #d0cca8;
+  --mt-beige-strong: #84784b;
+  --mt-sage: #8fb684;
+  --mt-sage-strong: #5c8352;
+  --mt-radius: 24px;
+  --mt-radius-sm: 16px;
+  --mt-shadow: 0 1px 2px rgba(8, 8, 6, 0.035), 0 10px 28px rgba(8, 8, 6, 0.025);
+  --mt-shadow-lift: 0 14px 36px rgba(8, 8, 6, 0.08);
+  --mt-macro-blue: color-mix(in srgb, var(--mt-blue) 42%, var(--mt-card));
+  --mt-macro-beige: color-mix(in srgb, var(--mt-beige) 48%, var(--mt-card));
+  --mt-macro-lavender: color-mix(in srgb, var(--mt-lavender) 24%, var(--mt-card));
+  --mt-macro-sage: color-mix(in srgb, var(--mt-sage) 24%, var(--mt-card));
+  color: var(--text-primary);
+}
+
+.dark-theme .meal-tracker,
+[data-theme='dark'] .meal-tracker {
+  --mt-ink: #f1f5ea;
+  --mt-ink-contrast: #141a12;
+  --mt-strong-bg: var(--accent);
+  --mt-strong-fg: #141a12;
+  --mt-soft: rgba(241, 245, 234, 0.055);
+  --mt-soft-strong: rgba(241, 245, 234, 0.09);
+  --mt-line: rgba(241, 245, 234, 0.09);
+  --mt-line-strong: rgba(241, 245, 234, 0.16);
+  --mt-blue-strong: #b1c4d0;
+  --mt-lavender-strong: #c3b3d2;
+  --mt-beige-strong: #d0cca8;
+  --mt-sage: #8fbe82;
+  --mt-sage-strong: #b2d8a8;
+  --mt-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 30px rgba(0, 0, 0, 0.16);
+  --mt-shadow-lift: 0 18px 44px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Page composition ───────────────────────────────────────────────── */
+.meal-tracker .mt-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+.meal-tracker *,
+.meal-tracker *::before,
+.meal-tracker *::after {
+  box-sizing: border-box;
+}
+.meal-tracker .mt-page-head {
+  align-items: flex-end;
+  margin: 0;
+  gap: 14px 20px;
+}
+.meal-tracker .mt-page-head .app-page-head-copy {
+  max-width: 620px;
+}
+.meal-tracker .mt-page-head .app-page-title {
+  font-family: var(--font-display);
+  font-size: clamp(29px, 2.4vw, 37px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
+}
+.meal-tracker .mt-page-head .app-page-sub {
+  max-width: 520px;
+  margin-top: 7px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.meal-tracker .mt-page-head .app-eyebrow {
+  margin-bottom: 8px;
+}
+
+/* ── Date picker + week strip ───────────────────────────────────────── */
+.meal-tracker .mt-date-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.meal-tracker .mt-date-trigger {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 13px 4px 5px;
+  border: 1px solid var(--mt-line);
+  border-radius: 999px;
+  background: var(--mt-card);
+  color: var(--text-primary);
+  box-shadow: var(--mt-shadow);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+.meal-tracker .mt-date-trigger:hover {
+  border-color: var(--mt-line-strong);
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-date-trigger:active {
+  transform: scale(0.98);
+}
+.meal-tracker .mt-date-trigger-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--mt-soft-strong);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-date-icon {
+  font-size: 18px;
+}
+.meal-tracker .mt-date-trigger-label {
+  min-width: 0;
+}
+.meal-tracker .mt-date-chevron {
+  font-size: 17px;
+  color: var(--text-muted);
+}
+
+.meal-tracker .mt-calendar {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 312px;
+  max-width: calc(100vw - 32px);
+  padding: 15px;
+  border: 1px solid var(--mt-line);
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+.meal-tracker .mt-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.meal-tracker .mt-calendar-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.meal-tracker .mt-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.meal-tracker .mt-calendar-nav-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.meal-tracker .mt-calendar-nav-button:hover:not(:disabled) {
+  background: var(--mt-soft);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-calendar-nav-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.meal-tracker .mt-calendar-weekdays,
+.meal-tracker .mt-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.meal-tracker .mt-calendar-weekdays {
+  margin-bottom: 4px;
+}
+.meal-tracker .mt-calendar-weekday {
+  padding: 3px 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-calendar-day {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  margin-inline: auto;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.meal-tracker .mt-calendar-day:hover:not(:disabled) {
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-calendar-day.is-selected {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 800;
+}
+.meal-tracker .mt-calendar-day.is-today {
+  border-color: var(--mt-line-strong);
+}
+.meal-tracker .mt-calendar-day.is-future {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+.meal-tracker .mt-calendar-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mt-line);
+}
+.meal-tracker .mt-calendar-link {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 750;
+}
+.meal-tracker .mt-calendar-link:hover {
+  color: var(--text-primary);
+}
+.meal-tracker .mt-calendar-link--accent {
+  color: var(--accent);
+}
+
+.meal-tracker .mt-week {
+  padding: 9px 14px 12px;
+  border-radius: 22px;
+  box-shadow: var(--mt-shadow);
+}
+.meal-tracker .mt-week-head {
+  display: flex;
+  height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.meal-tracker .mt-week-month {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.meal-tracker .mt-week-nav {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+.meal-tracker .mt-week-nav:hover:not(:disabled) {
+  background: var(--mt-soft);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-week-nav:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+.meal-tracker .mt-week-nav-icon {
+  font-size: 20px;
+}
+.meal-tracker .mt-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.meal-tracker .mt-week-day {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 2px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 100%;
+  max-width: 78px;
+  justify-self: center;
+  font-family: var(--font-sans);
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+.meal-tracker .mt-week-day:hover:not(:disabled):not(.is-selected) {
+  background: var(--mt-soft);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-week-day:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.meal-tracker .mt-week-day.is-selected {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.meal-tracker .mt-week-day.is-today:not(.is-selected) {
+  border-color: var(--mt-line-strong);
+}
+.meal-tracker .mt-week-day.is-today:not(.is-selected)::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.meal-tracker .mt-week-day:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+.meal-tracker .mt-week-day-label {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-week-day-number {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────── */
+.meal-tracker .mt-dashboard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+.meal-tracker .mt-primary,
+.meal-tracker .mt-rail {
+  display: contents;
+}
+.meal-tracker .mt-summary { order: 1; }
+.meal-tracker .mt-macros { order: 2; }
+.meal-tracker .mt-log { order: 3; }
+.meal-tracker .mt-manual { order: 4; }
+.meal-tracker .mt-result-slot { order: 5; }
+.meal-tracker .mt-diary { order: 6; }
+.meal-tracker .mt-coach-slot { order: 7; }
+.meal-tracker .mt-primary > *,
+.meal-tracker .mt-rail > * {
+  min-width: 0;
+}
+
+@media (min-width: 1180px) {
+  .meal-tracker .mt-dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(318px, 0.78fr);
+    align-items: start;
+    gap: 20px;
+  }
+  .meal-tracker .mt-primary,
+  .meal-tracker .mt-rail {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .meal-tracker .mt-summary,
+  .meal-tracker .mt-macros,
+  .meal-tracker .mt-log,
+  .meal-tracker .mt-manual,
+  .meal-tracker .mt-result-slot,
+  .meal-tracker .mt-diary,
+  .meal-tracker .mt-coach-slot {
+    order: initial;
+  }
+  .meal-tracker .mt-diary {
+    grid-column: 1 / -1;
+  }
+  .meal-tracker .mt-diary .mt-meal-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 10px;
+  }
+}
+
+/* ── Shared panel + type ────────────────────────────────────────────── */
+.meal-tracker .mt-panel {
+  min-width: 0;
+  border: 1px solid var(--mt-line);
+  border-radius: var(--mt-radius);
+  background: var(--mt-card);
+  box-shadow: var(--mt-shadow);
+}
+.meal-tracker .mt-kicker {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.meal-tracker .mt-card-head-copy {
+  min-width: 0;
+}
+.meal-tracker .mt-card-title {
+  margin: 3px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+.meal-tracker .mt-head-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--mt-soft);
+  color: var(--text-secondary);
+}
+.meal-tracker .mt-head-icon-symbol {
+  font-size: 18px;
+}
+.meal-tracker .mt-soft-pill {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--mt-soft);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 750;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.meal-tracker .mt-pill-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.meal-tracker .mt-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.meal-tracker .mt-section-head--compact {
+  align-items: flex-end;
+}
+.meal-tracker .mt-section-kicker {
+  margin: 0 0 2px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+.meal-tracker .mt-section-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.meal-tracker .mt-section-sub {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.meal-tracker .mt-icon-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+.meal-tracker .mt-icon-button:hover:not(:disabled) {
+  background: var(--mt-soft-strong);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.meal-tracker .mt-icon-symbol {
+  font-size: 18px;
+}
+
+/* ── Calorie summary ────────────────────────────────────────────────── */
+.meal-tracker .mt-summary {
+  position: relative;
+  padding: 20px;
+  overflow: hidden;
+}
+.meal-tracker .mt-summary::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -90px;
+  width: 250px;
+  height: 250px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  pointer-events: none;
+}
+.meal-tracker .mt-summary-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+.meal-tracker .mt-summary-visual {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+.meal-tracker .mt-gauge {
+  position: relative;
+  width: min(100%, 224px);
+  aspect-ratio: 1;
+}
+.meal-tracker .mt-gauge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.meal-tracker .mt-gauge-track {
+  stroke: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.meal-tracker .mt-gauge-track--inner {
+  stroke: color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+.meal-tracker .mt-gauge-arc {
+  transition: stroke-dashoffset 0.75s var(--ease-default);
+}
+.meal-tracker .mt-gauge-arc--calories {
+  stroke: var(--accent);
+}
+.meal-tracker .mt-gauge-arc--macros {
+  stroke: var(--mt-lavender);
+}
+.meal-tracker .mt-gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-top: 8px;
+  text-align: center;
+}
+.meal-tracker .mt-gauge-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--mt-strong-bg) 18%, transparent);
+}
+.meal-tracker .mt-gauge-icon-symbol {
+  font-size: 25px;
+}
+.meal-tracker .mt-gauge-of {
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.meal-tracker .mt-gauge-value {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(30px, 3.3vw, 38px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+.meal-tracker .mt-gauge-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px 12px;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.meal-tracker .mt-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.meal-tracker .mt-legend-item strong {
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+.meal-tracker .mt-legend-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+.meal-tracker .mt-legend-dot--calories { background: var(--accent); }
+.meal-tracker .mt-legend-dot--macros { background: var(--mt-lavender); }
+
+.meal-tracker .mt-summary-side {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 9px;
+}
+.meal-tracker .mt-remaining {
+  padding: 13px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--mt-radius-sm);
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-remaining.is-over {
+  border-color: color-mix(in srgb, var(--mt-brown) 20%, transparent);
+  background: color-mix(in srgb, var(--mt-beige) 24%, var(--mt-card));
+}
+.meal-tracker .mt-remaining-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-remaining-value {
+  margin: 2px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+.meal-tracker .mt-remaining-value span {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.meal-tracker .mt-remaining-note {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.meal-tracker .mt-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.meal-tracker .mt-mini-stat {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--mt-line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--mt-card) 70%, var(--mt-soft));
+}
+.meal-tracker .mt-mini-stat span {
+  display: block;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-mini-stat strong {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.meal-tracker .mt-mini-stat small {
+  margin-left: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+@media (min-width: 640px) {
+  .meal-tracker .mt-summary {
+    padding: 22px 24px 24px;
+  }
+  .meal-tracker .mt-summary-body {
+    flex-direction: row;
+    align-items: center;
+    gap: 22px;
+    margin-top: 10px;
+  }
+  .meal-tracker .mt-summary-visual {
+    width: clamp(196px, 28vw, 240px);
+    flex: 0 0 auto;
+  }
+  .meal-tracker .mt-summary-side {
+    flex: 1;
+  }
+}
+
+@media (min-width: 1180px) {
+  .meal-tracker .mt-summary {
+    padding: 24px 26px 26px;
+  }
+  .meal-tracker .mt-summary-visual {
+    width: 238px;
+  }
+}
+
+/* ── Macro cards ────────────────────────────────────────────────────── */
+.meal-tracker .mt-macros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.meal-tracker .mt-macro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.meal-tracker .mt-macro-tile {
+  min-width: 0;
+  padding: 13px 13px 12px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  color: var(--text-primary);
+}
+.meal-tracker .mt-macro-tile--protein {
+  border-color: color-mix(in srgb, var(--mt-blue) 42%, transparent);
+  background: var(--mt-macro-blue);
+  --mt-macro-strong: var(--mt-blue-strong);
+}
+.meal-tracker .mt-macro-tile--carbs {
+  border-color: color-mix(in srgb, var(--mt-beige) 52%, transparent);
+  background: var(--mt-macro-beige);
+  --mt-macro-strong: var(--mt-beige-strong);
+}
+.meal-tracker .mt-macro-tile--fat {
+  border-color: color-mix(in srgb, var(--mt-lavender) 28%, transparent);
+  background: var(--mt-macro-lavender);
+  --mt-macro-strong: var(--mt-lavender-strong);
+}
+.meal-tracker .mt-macro-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+.meal-tracker .mt-macro-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--mt-card) 64%, transparent);
+  color: var(--mt-macro-strong);
+}
+.meal-tracker .mt-macro-icon-symbol {
+  font-size: 15px;
+}
+.meal-tracker .mt-macro-label {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-macro-pct {
+  margin-left: auto;
+  color: var(--mt-macro-strong);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+.meal-tracker .mt-macro-value {
+  margin: 10px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(21px, 2.1vw, 27px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+.meal-tracker .mt-macro-value span {
+  margin-left: 2px;
+  color: color-mix(in srgb, var(--text-primary) 58%, transparent);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.meal-tracker .mt-macro-target {
+  margin: 2px 0 9px;
+  color: color-mix(in srgb, var(--text-primary) 56%, transparent);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.meal-tracker .mt-macro-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+.meal-tracker .mt-macro-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mt-macro-strong);
+  transition: width 0.5s var(--ease-default);
+}
+
+@media (max-width: 360px) {
+  .meal-tracker .mt-macro-grid {
+    gap: 7px;
+  }
+  .meal-tracker .mt-macro-tile {
+    padding: 10px 9px 10px;
+    border-radius: 17px;
+  }
+  .meal-tracker .mt-macro-icon {
+    width: 23px;
+    height: 23px;
+    border-radius: 8px;
+  }
+  .meal-tracker .mt-macro-icon-symbol {
+    font-size: 13px;
+  }
+  .meal-tracker .mt-macro-label {
+    font-size: 10px;
+  }
+  .meal-tracker .mt-macro-value {
+    font-size: 20px;
+  }
+  .meal-tracker .mt-macro-target {
+    font-size: 9px;
+  }
+}
+
+/* ── Diary ──────────────────────────────────────────────────────────── */
+.meal-tracker .mt-diary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.meal-tracker .mt-diary-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--mt-soft);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.meal-tracker .mt-diary-count strong {
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+.meal-tracker .mt-diary-count-separator {
+  width: 1px;
+  height: 9px;
+  margin: 0 2px;
+  background: var(--mt-line-strong);
+}
+.meal-tracker .mt-diary-empty-note {
+  margin: 0;
+  padding: 8px 11px;
+  border-radius: 11px;
+  background: var(--mt-soft);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.meal-tracker .mt-meal-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.meal-tracker .mt-meal-group {
+  padding: 12px 13px;
+  border-radius: 21px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.meal-tracker .mt-meal-group:hover {
+  border-color: var(--mt-line-strong);
+}
+.meal-tracker .mt-meal-group-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+.meal-tracker .mt-meal-group-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 13px;
+}
+.meal-tracker .mt-meal-group-icon--breakfast {
+  background: color-mix(in srgb, var(--mt-beige) 48%, var(--mt-card));
+  color: var(--mt-beige-strong);
+}
+.meal-tracker .mt-meal-group-icon--lunch {
+  background: color-mix(in srgb, var(--mt-blue) 42%, var(--mt-card));
+  color: var(--mt-blue-strong);
+}
+.meal-tracker .mt-meal-group-icon--dinner {
+  background: color-mix(in srgb, var(--mt-lavender) 25%, var(--mt-card));
+  color: var(--mt-lavender-strong);
+}
+.meal-tracker .mt-meal-group-icon--snack {
+  background: color-mix(in srgb, var(--mt-sage) 28%, var(--mt-card));
+  color: var(--mt-sage-strong);
+}
+.meal-tracker .mt-meal-group-icon--other {
+  background: var(--mt-soft-strong);
+  color: var(--text-muted);
+}
+.meal-tracker .mt-meal-group-icon-symbol {
+  font-size: 19px;
+}
+.meal-tracker .mt-meal-group-copy {
+  min-width: 0;
+  flex: 1;
+}
+.meal-tracker .mt-meal-group-title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-meal-group-sub {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-add-button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--mt-line);
+  border-radius: 999px;
+  background: var(--mt-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.meal-tracker .mt-add-button:hover {
+  border-color: transparent;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+}
+.meal-tracker .mt-add-button:active {
+  transform: scale(0.94);
+}
+.meal-tracker .mt-add-icon {
+  font-size: 20px;
+}
+.meal-tracker .mt-meal-items {
+  margin-top: 9px;
+}
+.meal-tracker .mt-meal-item {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--mt-line);
+  border-radius: 12px;
+  transition: background-color 0.14s ease;
+}
+.meal-tracker .mt-meal-item:hover {
+  background: color-mix(in srgb, var(--mt-soft) 60%, transparent);
+}
+.meal-tracker .mt-meal-thumb {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 13px;
+}
+.meal-tracker .mt-meal-thumb--image {
+  display: block;
+  object-fit: cover;
+}
+.meal-tracker .mt-meal-thumb--breakfast {
+  background: color-mix(in srgb, var(--mt-beige) 42%, var(--mt-card));
+  color: var(--mt-beige-strong);
+}
+.meal-tracker .mt-meal-thumb--lunch {
+  background: color-mix(in srgb, var(--mt-blue) 35%, var(--mt-card));
+  color: var(--mt-blue-strong);
+}
+.meal-tracker .mt-meal-thumb--dinner {
+  background: color-mix(in srgb, var(--mt-lavender) 22%, var(--mt-card));
+  color: var(--mt-lavender-strong);
+}
+.meal-tracker .mt-meal-thumb--snack {
+  background: color-mix(in srgb, var(--mt-sage) 25%, var(--mt-card));
+  color: var(--mt-sage-strong);
+}
+.meal-tracker .mt-meal-thumb--other {
+  background: var(--mt-soft-strong);
+  color: var(--text-muted);
+}
+.meal-tracker .mt-meal-thumb-icon {
+  font-size: 20px;
+}
+.meal-tracker .mt-meal-copy {
+  min-width: 0;
+}
+.meal-tracker .mt-meal-topline {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 8px;
+}
+.meal-tracker .mt-meal-name {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.meal-tracker .mt-meal-energy {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.meal-tracker .mt-meal-energy span {
+  margin-left: 2px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 8.5px;
+  font-weight: 600;
+}
+.meal-tracker .mt-meal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 7px;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.meal-tracker .mt-meal-serving {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-meal-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.meal-tracker .mt-meal-meta-icon {
+  font-size: 11px;
+}
+.meal-tracker .mt-meal-macros {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.meal-tracker .mt-delete-button {
+  width: 38px;
+  height: 38px;
+}
+.meal-tracker .mt-delete-icon {
+  font-size: 16px;
+  color: color-mix(in srgb, var(--error) 80%, var(--text-muted));
+}
+.meal-tracker .mt-delete-button:hover:not(:disabled) {
+  background: var(--error-bg);
+}
+.meal-tracker .mt-delete-spinner {
+  width: 15px;
+  height: 15px;
+}
+.meal-tracker .mt-diary-error {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* Loading skeletons mirror the diary row geometry. */
+.meal-tracker .mt-diary-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.meal-tracker .mt-skeleton-group {
+  padding: 12px 13px;
+}
+.meal-tracker .mt-skeleton-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.meal-tracker .mt-skeleton-block {
+  display: block;
+  border-radius: 8px;
+  background: var(--mt-soft-strong);
+  animation: mt-shimmer 1.4s ease-in-out infinite;
+}
+.meal-tracker .mt-skeleton-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 13px;
+}
+.meal-tracker .mt-skeleton-title {
+  width: 110px;
+  height: 13px;
+  border-radius: 999px;
+}
+.meal-tracker .mt-skeleton-add {
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  border-radius: 999px;
+}
+.meal-tracker .mt-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mt-line);
+}
+.meal-tracker .mt-skeleton-thumb {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 13px;
+}
+.meal-tracker .mt-skeleton-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+}
+.meal-tracker .mt-skeleton-line {
+  width: 72%;
+  height: 11px;
+  border-radius: 999px;
+}
+.meal-tracker .mt-skeleton-line--short {
+  width: 45%;
+  height: 9px;
+}
+@keyframes mt-shimmer {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* ── Quick log ──────────────────────────────────────────────────────── */
+.meal-tracker .mt-log {
+  padding: 18px;
+}
+.meal-tracker .mt-log-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.meal-tracker .mt-log-primary {
+  display: flex;
+  min-height: 63px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 0;
+  border-radius: 17px;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  transition: transform 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
+}
+.meal-tracker .mt-log-primary:hover {
+  box-shadow: var(--mt-shadow-lift);
+  opacity: 0.94;
+}
+.meal-tracker .mt-log-primary:active {
+  transform: scale(0.985);
+}
+.meal-tracker .mt-log-primary-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mt-strong-fg) 14%, transparent);
+}
+.meal-tracker .mt-log-primary-symbol {
+  font-size: 20px;
+}
+.meal-tracker .mt-log-primary-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+.meal-tracker .mt-log-primary-copy strong {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.meal-tracker .mt-log-primary-copy small {
+  color: color-mix(in srgb, var(--mt-strong-fg) 64%, transparent);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.meal-tracker .mt-log-arrow {
+  margin-left: auto;
+  font-size: 18px;
+  opacity: 0.72;
+}
+.meal-tracker .mt-log-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.meal-tracker .mt-log-alternative {
+  display: flex;
+  min-width: 0;
+  min-height: 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--mt-line);
+  border-radius: 15px;
+  background: var(--mt-soft);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.meal-tracker .mt-log-alternative:hover {
+  border-color: var(--mt-line-strong);
+  background: var(--mt-soft-strong);
+}
+.meal-tracker .mt-log-alt-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--mt-card);
+  color: var(--text-secondary);
+}
+.meal-tracker .mt-log-alt-symbol {
+  font-size: 16px;
+}
+.meal-tracker .mt-log-alternative strong {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.meal-tracker .mt-log-alternative small {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.meal-tracker .mt-photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid var(--mt-line);
+  border-radius: 16px;
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-photo-preview-image,
+.meal-tracker .mt-photo-preview-placeholder {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  object-fit: cover;
+}
+.meal-tracker .mt-photo-preview-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--mt-card);
+  color: var(--text-muted);
+}
+.meal-tracker .mt-photo-preview-icon {
+  font-size: 21px;
+}
+.meal-tracker .mt-photo-preview-copy {
+  min-width: 0;
+  flex: 1;
+}
+.meal-tracker .mt-photo-preview-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.meal-tracker .mt-photo-preview-note {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+.meal-tracker .mt-photo-preview-spinner {
+  width: 18px;
+  height: 18px;
+}
+.meal-tracker .mt-photo-clear {
+  width: 34px;
+  height: 34px;
+}
+
+/* ── Manual entry ───────────────────────────────────────────────────── */
+.meal-tracker .mt-manual {
+  padding: 18px;
+}
+.meal-tracker .mt-manual-close {
+  width: 36px;
+  height: 36px;
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-manual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+.meal-tracker .mt-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.meal-tracker .mt-field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-bottom: 5px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.meal-tracker .mt-field-suffix {
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 500;
+}
+.meal-tracker .mt-meal-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.meal-tracker .mt-meal-type {
+  display: flex;
+  min-width: 0;
+  min-height: 52px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: 1px solid var(--mt-line);
+  border-radius: 12px;
+  background: var(--mt-soft);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.meal-tracker .mt-meal-type span {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-meal-type:hover:not(.is-active) {
+  border-color: var(--mt-line-strong);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-meal-type.is-active {
+  border-color: transparent;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+}
+.meal-tracker .mt-meal-type-icon {
+  font-size: 16px;
+}
+.meal-tracker .mt-catalog-field {
+  position: relative;
+  min-width: 0;
+}
+.meal-tracker .mt-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--mt-line-strong);
+  border-radius: 11px;
+  outline: none;
+  background: var(--mt-soft);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.meal-tracker .mt-input::placeholder {
+  color: var(--input-placeholder);
+}
+.meal-tracker .mt-input:focus {
+  border-color: var(--accent);
+  background: var(--mt-card);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.meal-tracker .mt-input.is-error {
+  border-color: color-mix(in srgb, var(--error) 65%, transparent);
+}
+.meal-tracker .mt-catalog-input {
+  margin-top: 0;
+}
+.meal-tracker .mt-catalog-menu {
+  position: absolute;
+  z-index: 55;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 252px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--mt-line);
+  border-radius: 13px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+  list-style: none;
+}
+.meal-tracker .mt-catalog-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+}
+.meal-tracker .mt-catalog-option:hover,
+.meal-tracker .mt-catalog-option.is-highlighted {
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-catalog-option-copy {
+  min-width: 0;
+}
+.meal-tracker .mt-catalog-option-name {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 11.5px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-catalog-option-serving {
+  display: block;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-catalog-option-values {
+  flex-shrink: 0;
+  text-align: right;
+}
+.meal-tracker .mt-catalog-option-kcal {
+  display: block;
+  color: var(--accent);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.meal-tracker .mt-catalog-option-macros {
+  display: block;
+  color: var(--text-muted);
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+.meal-tracker .mt-catalog-note {
+  padding: 6px 9px;
+  border-top: 1px solid var(--mt-line);
+  color: var(--text-muted);
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+.meal-tracker .mt-field-error {
+  margin: 4px 0 0;
+  color: var(--error);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.meal-tracker .mt-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.meal-tracker .mt-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.meal-tracker .mt-save-button {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 800;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.meal-tracker .mt-save-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.meal-tracker .mt-save-button:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.meal-tracker .mt-save-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.meal-tracker .mt-save-icon {
+  font-size: 17px;
+}
+.meal-tracker .mt-save-spinner {
+  width: 15px;
+  height: 15px;
+}
+.meal-tracker .mt-form-note {
+  margin: -2px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  text-align: center;
+}
+
+/* ── Photo analysis result ──────────────────────────────────────────── */
+.meal-tracker .mt-result {
+  padding: 18px;
+}
+.meal-tracker .mt-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.meal-tracker .mt-result-heading {
+  min-width: 0;
+}
+.meal-tracker .mt-result-title {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+.meal-tracker .mt-result-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.meal-tracker .mt-result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--mt-soft);
+  color: var(--text-muted);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-result-badge--corrected {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.meal-tracker .mt-result-badge-icon {
+  font-size: 11px;
+}
+.meal-tracker .mt-result-close {
+  width: 34px;
+  height: 34px;
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-result-section-label {
+  margin: 16px 0 7px;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-result-section-label--inline {
+  margin: 0;
+}
+.meal-tracker .mt-result-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, transparent);
+  border-radius: 12px;
+  background: var(--warning-bg);
+}
+.meal-tracker .mt-result-warning-icon {
+  flex-shrink: 0;
+  color: var(--warning);
+  font-size: 18px;
+}
+.meal-tracker .mt-result-warning-title {
+  margin: 0;
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-result-warning-list {
+  margin: 4px 0 0;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 9.5px;
+  line-height: 1.45;
+  list-style: none;
+}
+.meal-tracker .mt-result-warning-note {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+.meal-tracker .mt-result-notice {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.meal-tracker .mt-result-notice--warning {
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.meal-tracker .mt-result-notice--info {
+  border: 1px solid color-mix(in srgb, var(--info) 22%, transparent);
+  background: var(--info-bg);
+  color: var(--info);
+}
+.meal-tracker .mt-result-nutrition {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px;
+  border-radius: 15px;
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-result-ring {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  flex-shrink: 0;
+}
+.meal-tracker .mt-result-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.meal-tracker .mt-result-ring-track {
+  stroke: color-mix(in srgb, var(--text-primary) 9%, transparent);
+}
+.meal-tracker .mt-result-ring-fill {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 0.5s var(--ease-default);
+}
+.meal-tracker .mt-result-ring-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.meal-tracker .mt-result-ring-value {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.meal-tracker .mt-result-ring-unit {
+  margin-top: 1px;
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 600;
+}
+.meal-tracker .mt-result-macros {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+}
+.meal-tracker .mt-result-macro-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+}
+.meal-tracker .mt-result-macro-label {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 650;
+}
+.meal-tracker .mt-result-macro-value {
+  color: var(--text-primary);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+.meal-tracker .mt-result-macro-track {
+  height: 4px;
+  margin-top: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.meal-tracker .mt-result-macro-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mt-lavender-strong);
+  transition: width 0.45s var(--ease-default);
+}
+.meal-tracker .mt-result-hint {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.meal-tracker .mt-result-portion {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+}
+.meal-tracker .mt-result-portion .mt-result-section-label {
+  margin-right: auto;
+}
+.meal-tracker .mt-result-portion-button {
+  min-width: 34px;
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--mt-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.meal-tracker .mt-result-portion-button:hover {
+  border-color: var(--mt-line-strong);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-result-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.meal-tracker .mt-result-ingredients {
+  display: flex;
+  gap: 7px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.meal-tracker .mt-result-ingredient {
+  display: flex;
+  width: 66px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.meal-tracker .mt-result-ingredient.is-excluded {
+  opacity: 0.42;
+  filter: grayscale(1);
+}
+.meal-tracker .mt-result-ingredient-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.meal-tracker .mt-result-ingredient-icon-wrap {
+  position: relative;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1.5px solid var(--mt-line);
+  border-radius: 999px;
+  background: var(--mt-soft);
+  color: var(--text-secondary);
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+.meal-tracker .mt-result-ingredient-main:hover .mt-result-ingredient-icon-wrap {
+  border-color: var(--mt-lavender-strong);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-result-ingredient-icon {
+  font-size: 20px;
+}
+.meal-tracker .mt-result-allergen-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 2px solid var(--bg-card);
+  border-radius: 999px;
+  background: var(--warning);
+  color: #080806;
+}
+.meal-tracker .mt-result-allergen-icon {
+  font-size: 9px;
+}
+.meal-tracker .mt-result-ingredient-name {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.meal-tracker .mt-result-ingredient-kcal {
+  width: 100%;
+  padding: 1px 2px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 750;
+}
+.meal-tracker .mt-result-ingredient-kcal.is-corrected {
+  color: var(--info);
+}
+.meal-tracker .mt-result-editor,
+.meal-tracker .mt-result-custom {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--mt-line);
+  border-radius: 13px;
+  background: var(--mt-soft);
+}
+.meal-tracker .mt-result-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+.meal-tracker .mt-result-editor-title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-tracker .mt-result-editor-close {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.meal-tracker .mt-result-editor-note {
+  margin: 4px 0 8px;
+  color: var(--text-muted);
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+.meal-tracker .mt-result-correct-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.meal-tracker .mt-result-correct-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.meal-tracker .mt-result-correct-field span {
+  color: var(--text-muted);
+  font-size: 7.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-result-correct-input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 4px;
+  border: 1px solid var(--mt-line);
+  border-radius: 7px;
+  outline: none;
+  background: var(--mt-card);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+.meal-tracker .mt-result-editor-actions,
+.meal-tracker .mt-result-custom-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+.meal-tracker .mt-result-editor-cancel,
+.meal-tracker .mt-result-editor-save {
+  flex: 1;
+  min-height: 31px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 750;
+}
+.meal-tracker .mt-result-editor-cancel {
+  border: 1px solid var(--mt-line);
+  background: transparent;
+  color: var(--text-muted);
+}
+.meal-tracker .mt-result-editor-save {
+  border: 0;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+}
+.meal-tracker .mt-result-search {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 10px;
+  border: 1px solid var(--mt-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+.meal-tracker .mt-result-search:hover {
+  background: var(--mt-soft);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-result-search-icon {
+  font-size: 14px;
+}
+.meal-tracker .mt-result-custom-input {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 9px;
+  margin-bottom: 5px;
+  border: 1px solid var(--mt-line);
+  border-radius: 9px;
+  outline: none;
+  background: var(--mt-card);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+}
+.meal-tracker .mt-result-custom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.meal-tracker .mt-result-slot-block {
+  margin-top: 14px;
+}
+.meal-tracker .mt-result-slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+}
+.meal-tracker .mt-result-slot {
+  min-width: 0;
+  min-height: 30px;
+  padding: 2px 3px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--mt-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.meal-tracker .mt-result-slot.is-active {
+  border-color: transparent;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+}
+.meal-tracker .mt-result-save {
+  min-height: 43px;
+  margin-top: 12px;
+  border-radius: 999px !important;
+  background: var(--mt-strong-bg) !important;
+  color: var(--mt-strong-fg) !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+.meal-tracker .mt-result-rescan {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 9.5px;
+  font-weight: 650;
+}
+.meal-tracker .mt-result-rescan:hover {
+  color: var(--text-primary);
+}
+.meal-tracker .mt-result-rescan-icon {
+  font-size: 13px;
+}
+.meal-tracker .mt-result-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 8px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--mt-beige) 28%, var(--mt-card));
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.meal-tracker .mt-result-suggestion-icon {
+  flex-shrink: 0;
+  color: var(--mt-beige-strong);
+  font-size: 13px;
+}
+
+/* ── Macro Coach ────────────────────────────────────────────────────── */
+.meal-tracker .mt-coach {
+  padding: 18px;
+  border-color: color-mix(in srgb, var(--mt-beige) 32%, var(--mt-line));
+  background: color-mix(in srgb, var(--mt-beige) 19%, var(--mt-card));
+}
+.meal-tracker .mt-coach-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.meal-tracker .mt-coach-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--mt-card) 66%, transparent);
+  color: var(--mt-beige-strong);
+}
+.meal-tracker .mt-coach-icon-symbol {
+  font-size: 18px;
+}
+.meal-tracker .mt-coach-heading {
+  min-width: 0;
+}
+.meal-tracker .mt-coach-title {
+  margin: 2px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.meal-tracker .mt-coach-goal {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.meal-tracker .mt-coach-message {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.meal-tracker .mt-coach-action {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 11px;
+  border: 1px solid var(--mt-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.meal-tracker .mt-coach-action:hover:not(:disabled) {
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+}
+.meal-tracker .mt-coach-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.meal-tracker .mt-coach-action-icon {
+  font-size: 13px;
+}
+.meal-tracker .mt-coach-error {
+  margin: 7px 0 0;
+  color: var(--error);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.meal-tracker .mt-coach-result {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mt-line);
+}
+.meal-tracker .mt-coach-result-message {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.meal-tracker .mt-coach-result-reasoning {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.meal-tracker .mt-coach-plan {
+  margin-top: 7px;
+  padding: 8px;
+  border: 1px solid var(--mt-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mt-card) 65%, transparent);
+}
+.meal-tracker .mt-coach-plan-title {
+  margin: 0;
+  color: var(--accent);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+.meal-tracker .mt-coach-plan-note {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+
+/* ── Toast + focus + reduced motion ─────────────────────────────────── */
+.meal-tracker .mt-toast {
+  position: fixed;
+  z-index: var(--z-toast);
+  left: 50%;
+  bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  max-width: calc(100vw - 32px);
+  padding: 9px 16px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+  box-shadow: var(--shadow-lg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .meal-tracker .mt-toast {
+    bottom: 24px;
+  }
+}
+.meal-tracker button:focus-visible,
+.meal-tracker input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.meal-tracker .mt-input:focus-visible {
+  outline: none;
+}
+
+/* ── Small-screen refinements ───────────────────────────────────────── */
+@media (max-width: 639px) {
+  .meal-tracker .mt-page-head {
+    align-items: flex-start;
+    margin-bottom: 0;
+  }
+  .meal-tracker .mt-page-head .app-page-head-copy {
+    max-width: 100%;
+  }
+  .meal-tracker .mt-page-head .app-page-actions {
+    width: auto;
+  }
+  .meal-tracker .mt-calendar {
+    right: auto;
+    left: 0;
+  }
+  .meal-tracker .mt-macro-pct {
+    display: none;
+  }
+  .meal-tracker .mt-page-head .app-page-title {
+    font-size: 28px;
+  }
+  .meal-tracker .mt-page-head .app-page-sub {
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .meal-tracker .mt-week {
+    padding: 7px 8px 9px;
+  }
+  .meal-tracker .mt-week-head {
+    height: 30px;
+    padding-inline: 3px;
+  }
+  .meal-tracker .mt-week-grid {
+    gap: 2px;
+  }
+  .meal-tracker .mt-week-day {
+    min-height: 55px;
+    border-radius: 14px;
+  }
+  .meal-tracker .mt-week-day-number {
+    font-size: 14px;
+  }
+  .meal-tracker .mt-summary {
+    padding: 17px;
+  }
+  .meal-tracker .mt-summary-body {
+    gap: 10px;
+  }
+  .meal-tracker .mt-gauge {
+    width: min(100%, 204px);
+  }
+  .meal-tracker .mt-gauge-icon {
+    width: 54px;
+    height: 54px;
+  }
+  .meal-tracker .mt-gauge-icon-symbol {
+    font-size: 23px;
+  }
+  .meal-tracker .mt-gauge-value {
+    font-size: 33px;
+  }
+  .meal-tracker .mt-summary-side {
+    gap: 0;
+  }
+  .meal-tracker .mt-remaining {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 13px;
+  }
+  .meal-tracker .mt-remaining-label {
+    line-height: 1.2;
+  }
+  .meal-tracker .mt-remaining-value {
+    margin: 0;
+    font-size: 22px;
+    white-space: nowrap;
+  }
+  .meal-tracker .mt-remaining-note,
+  .meal-tracker .mt-mini-stats {
+    display: none;
+  }
+  .meal-tracker .mt-macro-tile {
+    padding: 12px 11px;
+  }
+  .meal-tracker .mt-section-title {
+    font-size: 17px;
+  }
+  .meal-tracker .mt-section-kicker {
+    font-size: 10px;
+  }
+  .meal-tracker .mt-diary .mt-section-head {
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .meal-tracker .mt-diary-count {
+    padding: 4px 8px;
+    font-size: 9.5px;
+  }
+  .meal-tracker .mt-meal-group {
+    padding: 11px;
+  }
+  .meal-tracker .mt-meal-item {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .meal-tracker .mt-meal-thumb {
+    width: 44px;
+    height: 44px;
+  }
+  .meal-tracker .mt-delete-button {
+    width: 36px;
+    height: 36px;
+  }
+  .meal-tracker .mt-result,
+  .meal-tracker .mt-manual,
+  .meal-tracker .mt-log,
+  .meal-tracker .mt-coach {
+    padding: 16px;
+  }
+  .meal-tracker .mt-date-trigger {
+    min-height: 44px;
+    padding-right: 11px;
+  }
+  .meal-tracker .mt-date-trigger-icon {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 380px) {
+  .meal-tracker .mt-page-head .app-page-title {
+    font-size: 26px;
+  }
+  .meal-tracker .mt-week-day {
+    min-height: 52px;
+    border-radius: 12px;
+  }
+  .meal-tracker .mt-week-day-label {
+    font-size: 9.5px;
+  }
+  .meal-tracker .mt-week-day-number {
+    font-size: 13px;
+  }
+  .meal-tracker .mt-gauge {
+    width: min(100%, 204px);
+  }
+  .meal-tracker .mt-gauge-icon {
+    width: 54px;
+    height: 54px;
+  }
+  .meal-tracker .mt-gauge-icon-symbol {
+    font-size: 23px;
+  }
+  .meal-tracker .mt-gauge-value {
+    font-size: 29px;
+  }
+  .meal-tracker .mt-soft-pill {
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+  .meal-tracker .mt-mini-stat {
+    padding: 8px 9px;
+  }
+  .meal-tracker .mt-meal-name {
+    font-size: 12px;
+  }
+  .meal-tracker .mt-meal-energy {
+    font-size: 11.5px;
+  }
+  .meal-tracker .mt-meal-meta {
+    gap: 2px 5px;
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meal-tracker *,
+  .meal-tracker *::before,
+  .meal-tracker *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

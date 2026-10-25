@@ -1,2 +1,2 @@
-export { ProtectedRoute, PublicRoute } from '../../hooks/useMiddleware.jsx';
+export { ProtectedRoute, PublicRoute, MemberRoute } from '../../hooks/useMiddleware.jsx';
 export { default as AppRoutes } from './AppRoutes.jsx';

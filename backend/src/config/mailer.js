@@ -1,266 +1,136 @@
-try { require('dotenv').config(); } catch {}
+// ─────────────────────────────────────────────────────────────────────────────
+// Mail transport — single source of truth for SMTP configuration.
+//
+// Default provider: BREVO (transactional SMTP relay).
+//   BREVO_SMTP_LOGIN  → your Brevo SMTP login (usually the account email)
+//   BREVO_SMTP_KEY    → your Brevo SMTP key ("master password")
+//   BREVO_SMTP_HOST   → optional, defaults to smtp-relay.brevo.com
+//   BREVO_SMTP_PORT   → optional, defaults to 587 (STARTTLS). Use 465 for SSL.
+//   MAIL_FROM         → optional From address, defaults to BREVO_SMTP_LOGIN
+//   MAIL_FROM_NAME    → optional display name, defaults to "Vitalis"
+//
+// Legacy fallback (kept so existing deployments don't hard-fail mid-migration):
+// if BREVO_* is absent but EMAIL_USER/EMAIL_PASS are set, we fall back to Gmail.
+//
+// This module only owns the transport. Message building lives in
+// services/email.service.js + templates/email.templates.js; the send helpers
+// are re-exported here (lazily) for backward compatibility.
+// ─────────────────────────────────────────────────────────────────────────────
+
+try {
+  require("dotenv").config();
+} catch {
+  /* dotenv optional */
+}
+
 const nodemailer = require("nodemailer");
 
+const DEFAULT_BREVO_HOST = "smtp-relay.brevo.com";
+
+function smtpSettings() {
+  const brevoLogin = process.env.BREVO_SMTP_LOGIN;
+  const brevoKey = process.env.BREVO_SMTP_KEY;
+  if (brevoLogin && brevoKey) {
+    const port = parseInt(process.env.BREVO_SMTP_PORT, 10) || 587;
+    return {
+      provider: "brevo",
+      host: process.env.BREVO_SMTP_HOST || DEFAULT_BREVO_HOST,
+      port,
+      secure: port === 465, // 465 = implicit TLS, 587 = STARTTLS
+      auth: { user: brevoLogin, pass: brevoKey },
+    };
+  }
+  // Legacy Gmail fallback (pre-Brevo deployments).
+  const gmailUser = process.env.EMAIL_USER;
+  const gmailPass = process.env.EMAIL_PASS;
+  if (gmailUser && gmailPass) {
+    return { provider: "gmail", service: "gmail", auth: { user: gmailUser, pass: gmailPass } };
+  }
+  return { provider: "none" };
+}
+
+const settings = smtpSettings();
+
 function mailConfigured() {
-  return Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+  return settings.provider !== "none";
+}
+
+// Address emails are sent from, resolved from the active provider.
+function fromAddress() {
+  if (settings.provider === "brevo") {
+    return process.env.MAIL_FROM || process.env.BREVO_SMTP_LOGIN;
+  }
+  if (settings.provider === "gmail") {
+    return process.env.MAIL_FROM || process.env.EMAIL_USER;
+  }
+  return process.env.MAIL_FROM || "no-reply@vitalis.local";
+}
+
+function fromHeader() {
+  const name = process.env.MAIL_FROM_NAME || "Vitalis";
+  return `"${name}" <${fromAddress()}>`;
 }
 
 if (!mailConfigured()) {
   console.warn(
-    "[mailer] EMAIL_USER/EMAIL_PASS not set — outbound email will fail gracefully (logged, not thrown)",
+    "[mailer] No provider configured — set BREVO_SMTP_LOGIN/BREVO_SMTP_KEY " +
+      "(or legacy EMAIL_USER/EMAIL_PASS). Outbound email will fail gracefully (logged, not thrown).",
   );
+} else if (settings.provider === "gmail") {
+  console.warn(
+    "[mailer] Brevo not configured — falling back to legacy Gmail transport. " +
+      "Set BREVO_SMTP_LOGIN/BREVO_SMTP_KEY to migrate.",
+  );
+} else {
+  console.log(`[mailer] Brevo SMTP transport active (${settings.host}:${settings.port})`);
 }
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
+// Build the transport lazily-ish but expose a single shared instance.
+const transportOptions = {
   connectionTimeout: 10000,
   greetingTimeout: 10000,
   socketTimeout: 15000,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  ...(process.env.NODE_ENV !== "production" &&
-  process.env.MAILER_INSECURE_TLS === "1"
+  ...(settings.service ? { service: settings.service } : {}),
+  ...(settings.host ? { host: settings.host } : {}),
+  ...(settings.port ? { port: settings.port, secure: settings.secure } : {}),
+  auth: settings.auth || {},
+  // Dev-only escape hatch for self-signed/dev SMTP boxes.
+  ...(process.env.NODE_ENV !== "production" && process.env.MAILER_INSECURE_TLS === "1"
     ? { tls: { rejectUnauthorized: false } }
     : {}),
-});
+};
 
-function safeSummary(summary = {}) {
-  const n = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : 0);
-  return {
-    calories: n(summary.calories),
-    protein: n(summary.protein),
-    carbs: n(summary.carbs),
-    fat: n(summary.fat),
-  };
-}
-
-function requireMailEnv() {
-  if (!mailConfigured()) {
-    throw new Error("Email service not configured (EMAIL_USER/EMAIL_PASS)");
-  }
-  if (!process.env.EMAIL_USER.includes("@")) {
-    throw new Error("EMAIL_USER is not a valid email address");
-  }
-}
-
-// ─── MEAL SUMMARY EMAIL ──────────────────────────────────────────────────────
-async function sendMealSummaryEmail(to, summary) {
-  requireMailEnv();
-  if (!to || !String(to).includes("@"))
-    throw new Error("Invalid recipient email");
-  const s = safeSummary(summary);
-  const mailOptions = {
-    from: `"Vitalis" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: "🥗 Your Daily Nutrition Summary — Vitalis",
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#0f0f0f;padding:32px;border-radius:12px;">
-        <div style="text-align:center;margin-bottom:24px;">
-          <h1 style="color:#a3e635;margin:0;font-size:24px;letter-spacing:2px;">VITALIS</h1>
-          <p style="color:#888;font-size:12px;margin:4px 0 0;">PERFORMANCE OS</p>
-        </div>
-
-        <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Daily Nutrition Summary</h2>
-        <p style="color:#aaa;font-size:14px;margin:0 0 24px;">
-          Here's what you've consumed today. Keep fueling your performance!
-        </p>
-
-        <table style="width:100%;border-collapse:collapse;background:#1a1a1a;border-radius:8px;overflow:hidden;">
-          <tr style="background:#1f1f1f;">
-            <td style="padding:14px 16px;color:#888;font-size:13px;">🔥 Calories</td>
-            <td style="padding:14px 16px;color:#a3e635;font-weight:bold;font-size:16px;text-align:right;">
-              ${s.calories} kcal
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 16px;color:#888;font-size:13px;">💪 Protein</td>
-            <td style="padding:14px 16px;color:#60a5fa;font-weight:bold;font-size:16px;text-align:right;">
-              ${s.protein}g
-            </td>
-          </tr>
-          <tr style="background:#1f1f1f;">
-            <td style="padding:14px 16px;color:#888;font-size:13px;">🍚 Carbs</td>
-            <td style="padding:14px 16px;color:#a3e635;font-weight:bold;font-size:16px;text-align:right;">
-              ${s.carbs}g
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 16px;color:#888;font-size:13px;">🥑 Fat</td>
-            <td style="padding:14px 16px;color:#fb923c;font-weight:bold;font-size:16px;text-align:right;">
-              ${s.fat}g
-            </td>
-          </tr>
-        </table>
-
-        <p style="color:#555;font-size:11px;text-align:center;margin-top:32px;">
-          You received this because you logged a meal on Vitalis.<br/>
-          © ${new Date().getFullYear()} Vitalis Performance OS
-        </p>
-      </div>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-}
-
-function escapeHtml(s) {
-  return String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[c],
-  );
-}
-
-function requireRecipient(to) {
-  requireMailEnv();
-  if (!to || !String(to).includes("@"))
-    throw new Error("Invalid recipient email");
-}
-
-// ─── PASSWORD RESET EMAIL ─────────────────────────────────────────────────────
-async function sendPasswordResetEmail(to, resetLink) {
-  requireRecipient(to);
-  if (!resetLink || typeof resetLink !== "string")
-    throw new Error("Invalid reset link");
-  const safeLink = escapeHtml(resetLink);
-  const mailOptions = {
-    from: `"Vitalis" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: "🔐 Reset Your Vitalis Password",
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#0f0f0f;padding:32px;border-radius:12px;">
-        <div style="text-align:center;margin-bottom:24px;">
-          <h1 style="color:#a3e635;margin:0;font-size:24px;letter-spacing:2px;">VITALIS</h1>
-          <p style="color:#888;font-size:12px;margin:4px 0 0;">PERFORMANCE OS</p>
-        </div>
-
-        <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Password Reset Request</h2>
-        <p style="color:#aaa;font-size:14px;margin:0 0 24px;">
-          We received a request to reset your password. Click the button below to continue.
-          This link expires in <strong style="color:#fff;">1 hour</strong>.
-        </p>
-
-        <div style="text-align:center;margin:32px 0;">
-          <a href="${safeLink}"
-             style="background:#a3e635;color:#000;padding:14px 32px;border-radius:8px;
-                    text-decoration:none;font-weight:bold;font-size:15px;letter-spacing:1px;">
-            RESET PASSWORD
-          </a>
-        </div>
-
-        <p style="color:#555;font-size:12px;">
-          If you didn't request this, you can safely ignore this email.
-          Your password will not be changed.
-        </p>
-
-        <p style="color:#555;font-size:11px;text-align:center;margin-top:32px;">
-          © ${new Date().getFullYear()} Vitalis Performance OS
-        </p>
-      </div>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-}
-
-// ─── WELCOME EMAIL ────────────────────────────────────────────────────────────
-async function sendWelcomeEmail(to, name) {
-  requireRecipient(to);
-  const mailOptions = {
-    from: `"Vitalis" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: "⚡ Welcome to Vitalis Performance OS",
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#0f0f0f;padding:32px;border-radius:12px;">
-        <div style="text-align:center;margin-bottom:24px;">
-          <h1 style="color:#a3e635;margin:0;font-size:24px;letter-spacing:2px;">VITALIS</h1>
-          <p style="color:#888;font-size:12px;margin:4px 0 0;">PERFORMANCE OS</p>
-        </div>
-
-        <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Welcome, ${escapeHtml(name)}! 👋</h2>
-        <p style="color:#aaa;font-size:14px;margin:0 0 24px;">
-          Your Vitalis account is ready. Start tracking your nutrition, workouts, 
-          sleep, and recovery — all in one place.
-        </p>
-
-        <div style="background:#1a1a1a;border-radius:8px;padding:20px;margin-bottom:24px;">
-          <p style="color:#a3e635;font-weight:bold;margin:0 0 12px;">What you can do:</p>
-          <p style="color:#aaa;font-size:13px;margin:6px 0;">🍗 AI-powered meal analysis</p>
-          <p style="color:#aaa;font-size:13px;margin:6px 0;">💪 Camera workout tracking</p>
-          <p style="color:#aaa;font-size:13px;margin:6px 0;">😴 Sleep & recovery monitoring</p>
-          <p style="color:#aaa;font-size:13px;margin:6px 0;">📊 Clinical health insights</p>
-          <p style="color:#aaa;font-size:13px;margin:6px 0;">🗺️ Activity map & run analysis</p>
-        </div>
-
-        <p style="color:#555;font-size:11px;text-align:center;margin-top:32px;">
-          © ${new Date().getFullYear()} Vitalis Performance OS
-        </p>
-      </div>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-}
-
-// ─── EMAIL VERIFICATION ─────────────────────────────────────────────────────
-async function sendVerificationEmail(to, verifyLink) {
-  requireRecipient(to);
-  if (!verifyLink || typeof verifyLink !== "string")
-    throw new Error("Invalid verification link");
-  const safeVerifyLink = escapeHtml(verifyLink);
-  const mailOptions = {
-    from: `"Vitalis" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: "✓ Verify Your Vitalis Account",
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#0f0f0f;padding:32px;border-radius:12px;">
-        <div style="text-align:center;margin-bottom:24px;">
-          <h1 style="color:#a3e635;margin:0;font-size:24px;letter-spacing:2px;">VITALIS</h1>
-          <p style="color:#888;font-size:12px;margin:4px 0 0;">PERFORMANCE OS</p>
-        </div>
-
-        <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Verify your email</h2>
-        <p style="color:#aaa;font-size:14px;margin:0 0 24px;">
-          Click the button below to activate your Vitalis account.
-          This link expires in <strong style="color:#fff;">24 hours</strong>.
-        </p>
-
-        <div style="text-align:center;margin:32px 0;">
-          <a href="${safeVerifyLink}"
-             style="background:#a3e635;color:#000;padding:14px 32px;border-radius:8px;
-                    text-decoration:none;font-weight:bold;font-size:15px;letter-spacing:1px;">
-            VERIFY EMAIL
-          </a>
-        </div>
-
-        <p style="color:#555;font-size:12px;">
-          If you didn't create this account, you can safely ignore this email.
-        </p>
-
-        <p style="color:#555;font-size:11px;text-align:center;margin-top:32px;">
-          © ${new Date().getFullYear()} Vitalis Performance OS
-        </p>
-      </div>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-}
+const transporter = nodemailer.createTransport(transportOptions);
 
 module.exports = {
   transporter,
   getTransporter: () => transporter,
-  escapeHtml,
-  sendMealSummaryEmail,
-  sendPasswordResetEmail,
-  sendWelcomeEmail,
-  sendVerificationEmail,
+  mailConfigured,
+  fromAddress,
+  fromHeader,
+  provider: settings.provider,
+  escapeHtml: require("../templates/email.templates").escapeHtml,
+  // Lazy re-exports (backward compat) — require inside the wrapper avoids the
+  // mailer ↔ email.service cycle at module-load time.
+  get sendMealSummaryEmail() {
+    return require("../services/email.service").sendMealSummaryEmail;
+  },
+  get sendPasswordResetEmail() {
+    return require("../services/email.service").sendPasswordResetEmail;
+  },
+  get sendPasswordResetOtpEmail() {
+    return require("../services/email.service").sendPasswordResetOtpEmail;
+  },
+  get sendWelcomeEmail() {
+    return require("../services/email.service").sendWelcomeEmail;
+  },
+  get sendVerificationEmail() {
+    return require("../services/email.service").sendVerificationEmail;
+  },
+  get sendFeedbackEmail() {
+    return require("../services/email.service").sendFeedbackEmail;
+  },
+  get sendEmailChangedNotice() {
+    return require("../services/email.service").sendEmailChangedNotice;
+  },
 };

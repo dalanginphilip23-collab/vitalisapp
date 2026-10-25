@@ -1,53 +1,13 @@
+const service = require('../services/security.service');
 
-const db = require('../config/db');
 // GET /api/security - fetch all sessions for the logged in user
-
 async function get(req,res,next){
   try{
         const userId = req.user?.id;
         if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     
         try {
-            let rows;
-            try {
-              [rows] = await db.execute(`
-                SELECT
-                    id,
-                    device      AS device_type,
-                    browser,
-                    os,
-                    ip_address,
-                    location    AS city,
-                    ''          AS country,
-                    created_at  AS last_active,
-                    is_current
-                FROM user_sessions
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-                LIMIT 50
-              `, [userId]);
-            } catch (e) {
-              // Fallback for DBs where location column also missing (defensive)
-              if (e.code === 'ER_BAD_FIELD_ERROR') {
-                const [fallback] = await db.execute(`
-                  SELECT
-                      id,
-                      device      AS device_type,
-                      browser,
-                      os,
-                      ip_address,
-                      ''          AS city,
-                      ''          AS country,
-                      created_at  AS last_active,
-                      is_current
-                  FROM user_sessions
-                  WHERE user_id = ?
-                  ORDER BY created_at DESC
-                  LIMIT 50
-                `, [userId]);
-                rows = fallback;
-              } else throw e;
-            }
+            const rows = await service.getSessions(userId);
     
             res.json(rows);
     
@@ -73,11 +33,8 @@ async function deleteSessionId(req,res,next){
             // device from the list, but its cookie token stays valid until
             // expiry or a token_version bump (logout / password change / reset).
             // The response message below says exactly that (no false "logged out").
-            const [result] = await db.execute(`
-                DELETE FROM user_sessions
-                WHERE id = ? AND user_id = ?
-            `, [sessionId, userId]);
-            if (result.affectedRows === 0) {
+            const deleted = await service.deleteSession(sessionId, userId);
+            if (!deleted) {
               return res.status(404).json({ error: 'Session not found' });
             }
 

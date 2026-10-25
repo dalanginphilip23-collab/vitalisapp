@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { apiGet, apiFetch } from '../lib/apiClient.js';
-import { resolveAvatar } from '../lib/avatar.js';
+import { resolveAvatar, capitalizeName } from '../lib/avatar.js';
 import { useAuth } from '../hooks/useAuth.jsx';
+import { useProfileWarnings } from '../hooks/useProfileWarnings.js';
 import { useNotification } from '../stores/toastStore.js';
 import { useNotificationStream } from '../context/NotificationStream.jsx';
 import { getSettingsItems } from '../constants/nav.js';
@@ -48,20 +49,20 @@ function NotificationOverlay({ notifications, onMarkRead, onMarkAllRead, onClose
     <>
       <div className="flex items-center justify-between px-4 py-3 border-b border-(--border-light) bg-(--surface)">
         <div className="flex items-center gap-2">
-          <Icon name="notifications" className="text-(--accent) text-[16px]" />
-          <span className="text-[13px] font-bold text-(--text-primary) tracking-tight">Notifications</span>
+          <Icon name="notifications" className="text-(--accent) text-[length:var(--fs-16)]" />
+          <span className="text-[length:var(--fs-13)] font-bold text-(--text-primary) tracking-tight">Notifications</span>
           {unreadCount > 0 && (
-            <span className="text-[10px] font-black bg-(--accent) text-[var(--text-inverse)] px-1.5 py-0.5 rounded-full leading-none">
+            <span className="text-[length:var(--fs-10)] font-black bg-(--accent) text-[var(--text-inverse)] px-1.5 py-0.5 rounded-full leading-none">
               {unreadCount}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={onMarkAllRead} className="text-[11px] text-(--accent)/80 hover:text-(--accent) transition-colors bg-transparent border-none cursor-pointer font-medium whitespace-nowrap px-1">
+          <button onClick={onMarkAllRead} className="text-[length:var(--fs-11)] text-(--accent)/80 hover:text-(--accent) transition-colors bg-transparent border-none cursor-pointer font-medium whitespace-nowrap px-1">
             Mark all read
           </button>
           <button onClick={onClose} aria-label="Close notifications" className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-(--bg-hover) hover:bg-(--bg-active) transition-colors border-none cursor-pointer">
-            <Icon name="close" className="text-(--text-muted) text-[14px]" />
+            <Icon name="close" className="text-(--text-muted) text-[length:var(--fs-14)]" />
           </button>
         </div>
       </div>
@@ -71,7 +72,7 @@ function NotificationOverlay({ notifications, onMarkRead, onMarkAllRead, onClose
           <button
             key={tab}
             onClick={(e) => { e.stopPropagation(); setFilter(tab); }}
-            className={`flex-1 py-2.5 text-[12px] font-semibold transition-all border-none cursor-pointer
+            className={`flex-1 py-2.5 text-[length:var(--fs-12)] font-semibold transition-all border-none cursor-pointer
               ${filter === tab ? 'text-(--accent) border-b-2 border-(--accent) bg-(--accent-bg)' : 'text-(--text-muted) hover:text-(--text-secondary) bg-transparent'}`}
           >
             {tab === 'recent' ? 'Recent' : `All (${notifications.length})`}
@@ -89,8 +90,8 @@ function NotificationOverlay({ notifications, onMarkRead, onMarkAllRead, onClose
       >
         {displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Icon name="notifications_none" className="text-[40px] text-(--text-disabled)" />
-            <p className="text-[12px] text-(--text-muted) m-0 font-medium">No notifications yet</p>
+            <Icon name="notifications" className="text-[length:var(--fs-40)] text-(--text-disabled)" />
+            <p className="text-[length:var(--fs-12)] text-(--text-muted) m-0 font-medium">No notifications yet</p>
           </div>
         ) : (
           displayed.map((notif) => (
@@ -107,14 +108,14 @@ function NotificationOverlay({ notifications, onMarkRead, onMarkAllRead, onClose
                 }
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-[12px] leading-relaxed m-0 wrap-break-word font-medium ${notif.is_read ? 'text-(--text-muted)' : 'text-(--text-secondary)'}`}>{notif.message}</p>
-                <p className={`text-[10px] mt-1 m-0 font-medium ${notif.is_read ? 'text-(--text-disabled)' : 'text-(--text-muted)'}`}>
+                <p className={`text-[length:var(--fs-12)] leading-relaxed m-0 wrap-break-word font-medium ${notif.is_read ? 'text-(--text-muted)' : 'text-(--text-secondary)'}`}>{notif.message}</p>
+                <p className={`text-[length:var(--fs-10)] mt-1 m-0 font-medium ${notif.is_read ? 'text-(--text-disabled)' : 'text-(--text-muted)'}`}>
                   {new Date(notif.created_at).toLocaleString()}
                 </p>
               </div>
               {!notif.is_read
-                ? <span className="shrink-0 mt-1 text-[9px] font-black bg-(--accent)/20 text-(--accent) px-1.5 py-0.5 rounded-full whitespace-nowrap border border-(--accent-border)">NEW</span>
-                : <span className="shrink-0 mt-1 text-[9px] font-medium text-(--text-disabled) whitespace-nowrap">read</span>
+                ? <span className="shrink-0 mt-1 text-[length:var(--fs-9)] font-black bg-(--accent)/20 text-(--accent) px-1.5 py-0.5 rounded-full whitespace-nowrap border border-(--accent-border)">NEW</span>
+                : <span className="shrink-0 mt-1 text-[length:var(--fs-9)] font-medium text-(--text-disabled) whitespace-nowrap">read</span>
               }
             </div>
           ))
@@ -122,13 +123,13 @@ function NotificationOverlay({ notifications, onMarkRead, onMarkAllRead, onClose
       </div>
 
       <div className="px-4 py-2.5 border-t border-(--border-light) bg-(--bg-tertiary) flex items-center justify-between">
-        <span className="text-[11px] font-medium">
+        <span className="text-[length:var(--fs-11)] font-medium">
           {unreadCount > 0
             ? <span className="text-(--accent)/70">{unreadCount} unread</span>
             : <span className="text-(--text-disabled)">All caught up ✓</span>
           }
         </span>
-        <span className="text-[10px] text-(--text-disabled)">{notifications.length} total</span>
+        <span className="text-[length:var(--fs-10)] text-(--text-disabled)">{notifications.length} total</span>
       </div>
     </>
   );
@@ -177,7 +178,7 @@ const setCachedProfile = (uid, data) => {
   _profileCache.set(uid, { at: Date.now(), data });
   if (_profileCache.size > 50) _profileCache.delete(_profileCache.keys().next().value);
 };
-const Topbar = ({ sidebarExpanded, userId }) => {
+const Topbar = ({ sidebarExpanded = false, userId = undefined, leftSlot = null, leftOffsetClass = undefined, topbarClassName = '' }) => {
   const navigate = useNavigate();
   const { addToast } = useNotification();
   const { subscribe } = useNotificationStream();
@@ -185,8 +186,20 @@ const Topbar = ({ sidebarExpanded, userId }) => {
   // Only fire authed polls when the session cookie is proven — pages pass
   // a (possibly stale) userId prop, which alone 401-spams on dead sessions.
   const authedUserId = sessionValid === true ? userId : null;
+  // Yellow "setup incomplete" dot: unfinished onboarding, missing body
+  // metrics, or no fitness goal (same warning Sidebar flags on Profile).
+  const { hasWarning } = useProfileWarnings(authedUserId, user);
 
-  const SETTINGS_ITEMS = getSettingsItems(navigate);
+  const accountBase = user?.role === 'admin' ? '/admin' : '/dashboard';
+  const SETTINGS_ITEMS = getSettingsItems(navigate, accountBase);
+  if (user?.role === 'admin') {
+    SETTINGS_ITEMS.unshift({
+      icon: 'shield_person',
+      label: 'Admin Console',
+      accent: true,
+      action: () => navigate('/admin'),
+    });
+  }
 
   const [profileData, setProfileData] = useState({ name: '', avatar_url: '' });
 
@@ -195,10 +208,12 @@ const Topbar = ({ sidebarExpanded, userId }) => {
   // show loading skeleton until real name arrives.
   const isUserLoading = !user?.name && !profileData.name;
   const userData = useMemo(() => ({
-    name: user?.name || profileData.name || (isUserLoading ? 'Loading…' : 'Member'),
+    name: capitalizeName(user?.name || profileData.name || (isUserLoading ? 'Loading…' : 'Member')),
     avatar_url: user?.avatar || profileData.avatar_url || '',
-    roleLabel: user?.fitness_goal || user?.goalType || 'Member',
-  }), [user?.name, user?.avatar, user?.fitness_goal, user?.goalType, profileData, isUserLoading]);
+    roleLabel: user?.role === 'admin'
+      ? 'Administrator'
+      : (user?.fitness_goal || user?.goalType || 'Member'),
+  }), [user?.name, user?.avatar, user?.fitness_goal, user?.goalType, user?.role, profileData, isUserLoading]);
 
   const [notifCount,     setNotifCount]     = useState(0);
   const [notifications,  setNotifications]  = useState([]);
@@ -299,7 +314,10 @@ const Topbar = ({ sidebarExpanded, userId }) => {
 
   const handleLogout = async () => {
     await logout();
-    addToast('Logged out successfully', 'info');
+    addToast('Logged out successfully', 'success', 5600, {
+      title: 'Logged out successfully',
+      description: 'Your session ended securely. See you next time.',
+    });
     navigate('/login');
   };
 
@@ -325,30 +343,36 @@ const Topbar = ({ sidebarExpanded, userId }) => {
       {/* ── Topbar — frosted glass over scrolled content */}
       <header
         className={
-          'fixed top-0 right-0 h-14 z-50 ' +
+          'fixed top-0 right-0 h-[var(--topbar-h)] z-50 ' +
           'glass-topbar ' +
           'border-b border-(--border-light) ' +
           'flex items-center justify-between px-3 sm:px-4 md:px-6 ' +
-          'transition-colors duration-150 ' +
-          'left-0 ' + (sidebarExpanded ? 'md:left-60' : 'md:left-18')
+          'transition-[left,background-color,border-color] duration-300 ease-out ' +
+          'left-0 ' + (leftOffsetClass ?? (sidebarExpanded ? 'md:left-60' : 'md:left-18')) +
+          (leftSlot ? ' vdash-topbar' : '') +
+          (topbarClassName ? ` ${topbarClassName}` : '')
         }
       >
-        {/* ── Left: brand ── */}
-        <div className="flex items-center gap-2 md:gap-3">
-          <button
-            onClick={() => navigate('/dashboard')}
-            aria-label="Go to dashboard"
-            className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
-          >
-            <img src="/pwa-192x192.png" alt="Vitalis logo" className="w-7 h-7 rounded-lg shrink-0" />
-            <span className="font-[Manrope] text-[15px] sm:text-[18px] md:pl-0 font-extrabold tracking-tight text-(--text-primary) hover:text-(--accent) transition-colors">
-              Vitalis
-            </span>
-          </button>
-        </div>
+        {/* ── Left: brand (default) or page-provided slot ── */}
+        {leftSlot ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">{leftSlot}</div>
+        ) : (
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              onClick={() => navigate('/dashboard')}
+              aria-label="Go to dashboard"
+              className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
+            >
+              <img src="/pwa-192x192.png" alt="Vitalis logo" className="w-7 h-7 rounded-lg shrink-0" />
+              <span className="font-['Manrope'] text-[length:var(--fs-16)] sm:text-[length:var(--fs-18)] font-extrabold tracking-[-0.01em] text-(--text-primary) hover:text-(--accent) transition-colors">
+                Vitalis
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* ── Right ── */}
-        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
           {/* Notification Bell */}
           <div className="relative flex items-center justify-center" ref={notifRef}>
             <button
@@ -358,7 +382,7 @@ const Topbar = ({ sidebarExpanded, userId }) => {
                 fetchNotifications();
               }}
             >
-              <Icon name="notifications" className={`text-[20px] sm:text-[21px] transition-colors ${notifOpen ? 'text-(--accent)' : 'text-(--text-muted) group-hover:text-(--accent)'}`} />
+              <Icon name="notifications" className={`text-[length:var(--fs-20)] sm:text-[length:var(--fs-21)] transition-colors ${notifOpen ? 'text-(--accent)' : 'text-(--text-muted) group-hover:text-(--accent)'}`} />
               {notifCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-(--accent) rounded-full border-[1.5px] border-(--bg-secondary) animate-pulse" />
               )}
@@ -392,7 +416,7 @@ const Topbar = ({ sidebarExpanded, userId }) => {
               // item's own onClick closed the menu — without this guard the
               // menu instantly reopens (visible when the item opens a modal
               // instead of navigating, e.g. Feedback).
-              if (e.target?.closest?.('#account-portal')) return;
+              if (/** @type {any} */ (e.target)?.closest?.('#account-portal')) return;
               e.stopPropagation();
               setNotifOpen(false);
               setSettingsOpen(prev => !prev);
@@ -402,15 +426,24 @@ const Topbar = ({ sidebarExpanded, userId }) => {
             }}
           >
             <div className="hidden lg:flex flex-col items-end">
-              <span className="text-[11px] sm:text-[12px] font-semibold text-(--text-secondary)">{userData.name}</span>
-              <span className="text-[9px] sm:text-[10px] text-(--text-muted) font-medium">{userData.roleLabel}</span>
+              <span className="text-[length:var(--fs-11)] sm:text-[length:var(--fs-12)] font-semibold text-(--text-secondary)">{userData.name}</span>
+              <span className="text-[length:var(--fs-9)] sm:text-[length:var(--fs-10)] text-(--text-muted) font-medium">{userData.roleLabel}</span>
             </div>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-(--accent)/20 bg-(--bg-tertiary) shrink-0 ring-1 ring-white/5 flex items-center justify-center font-bold text-[11px]" style={showAvatarImg ? undefined : { background: avatar.gradient, color: '#fff' }}>
-              {showAvatarImg ? <img src={avatar.src} alt="User" className="w-full h-full object-cover" onError={() => setAvatarBroken(true)} /> : avatar.initials}
+            <div className="relative shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-(--accent)/20 bg-(--bg-tertiary) ring-1 ring-white/5 flex items-center justify-center font-bold text-[length:var(--fs-11)]" style={showAvatarImg ? undefined : { background: avatar.surface.background, color: avatar.surface.color }}>
+                {showAvatarImg ? <img src={avatar.src} alt="User" className="w-full h-full object-cover" onError={() => setAvatarBroken(true)} /> : avatar.initials}
+              </div>
+              {hasWarning && (
+                <span
+                  aria-hidden="true"
+                  title="Profile setup incomplete"
+                  className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--warning)] ring-2 ring-[var(--bg-secondary)]"
+                />
+              )}
             </div>
             <Icon
               name={settingsOpen ? 'expand_less' : 'expand_more'}
-              className="text-[16px] text-(--text-muted) hidden sm:block"
+              className="text-[length:var(--fs-16)] text-(--text-muted) hidden sm:block"
             />
 
             {settingsOpen && createPortal(
@@ -420,12 +453,21 @@ const Topbar = ({ sidebarExpanded, userId }) => {
                 style={{ top: '64px', right: '12px', zIndex: 2000 }}
               >
                 <div className="flex items-center gap-3 px-4 py-3.5 border-b border-(--border-light) bg-(--surface)">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-(--accent)/20 bg-(--bg-tertiary) shrink-0 flex items-center justify-center font-bold text-[12px]" style={showAvatarImg ? undefined : { background: avatar.gradient, color: '#fff' }}>
-                    {showAvatarImg ? <img src={avatar.src} alt="User" className="w-full h-full object-cover" onError={() => setAvatarBroken(true)} /> : avatar.initials}
+                  <div className="relative shrink-0">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-(--accent)/20 bg-(--bg-tertiary) flex items-center justify-center font-bold text-[length:var(--fs-12)]" style={showAvatarImg ? undefined : { background: avatar.surface.background, color: avatar.surface.color }}>
+                      {showAvatarImg ? <img src={avatar.src} alt="User" className="w-full h-full object-cover" onError={() => setAvatarBroken(true)} /> : avatar.initials}
+                    </div>
+                    {hasWarning && (
+                      <span
+                        aria-hidden="true"
+                        title="Profile setup incomplete"
+                        className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--warning)] ring-2 ring-[var(--surface)]"
+                      />
+                    )}
                   </div>
                   <div>
-                    <p className="text-[12px] sm:text-[13px] font-bold text-(--text-primary) leading-tight m-0">{userData.name}</p>
-                    <p className="text-[9px] sm:text-[10px] text-(--text-muted) m-0 font-medium">{userData.roleLabel}</p>
+                    <p className="text-[length:var(--fs-12)] sm:text-[length:var(--fs-13)] font-bold text-(--text-primary) leading-tight m-0">{userData.name}</p>
+                    <p className="text-[length:var(--fs-9)] sm:text-[length:var(--fs-10)] text-(--text-muted) m-0 font-medium">{userData.roleLabel}</p>
                   </div>
                 </div>
                 <div className="p-1.5 flex flex-col gap-0.5">
@@ -433,24 +475,24 @@ const Topbar = ({ sidebarExpanded, userId }) => {
                     <button
                       key={label}
                       onClick={() => { action(); setSettingsOpen(false); }}
-                      className={'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] sm:text-[12px] transition-colors duration-150 text-left cursor-pointer border-none bg-transparent ' + (accent ? 'text-(--accent) hover:bg-(--accent-bg)' : 'text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-hover)')}
+                      className={'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[length:var(--fs-11)] sm:text-[length:var(--fs-12)] transition-colors duration-150 text-left cursor-pointer border-none bg-transparent ' + (accent ? 'text-(--accent) hover:bg-(--accent-bg)' : 'text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-hover)')}
                     >
-                      <Icon name={icon} className="text-[14px] sm:text-[15px]" />
+                      <Icon name={icon} className="text-[length:var(--fs-14)] sm:text-[length:var(--fs-15)]" />
                       {label}
                     </button>
                   ))}
                   <div className="border-t border-(--border-light) mt-1 pt-1">
                     <button
                       onClick={() => { setShowFeedback(true); setSettingsOpen(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] sm:text-[12px] transition-colors duration-150 text-left cursor-pointer border-none bg-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-hover)"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[length:var(--fs-11)] sm:text-[length:var(--fs-12)] transition-colors duration-150 text-left cursor-pointer border-none bg-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-hover)"
                     >
-                      <Icon name="feedback" className="text-[14px] sm:text-[15px]" /> Feedback
+                      <Icon name="rate_review" className="text-[length:var(--fs-14)] sm:text-[length:var(--fs-15)]" /> Feedback
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] sm:text-[12px] text-[#e05050] hover:bg-[#e05050]/10 transition-colors duration-150 cursor-pointer border-none bg-transparent"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[length:var(--fs-11)] sm:text-[length:var(--fs-12)] text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors duration-150 cursor-pointer border-none bg-transparent"
                     >
-                      <Icon name="logout" className="text-[14px] sm:text-[15px]" /> Log out
+                      <Icon name="logout" className="text-[length:var(--fs-14)] sm:text-[length:var(--fs-15)]" /> Log out
                     </button>
                   </div>
                 </div>

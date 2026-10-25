@@ -126,7 +126,7 @@ async function doFetch(
   {
     timeoutMs = DEFAULT_TIMEOUT_MS,
     skipAuthRedirect = false,
-    rest = {},
+    rest = /** @type {any} */ ({}),
     method = "GET",
   },
   outerSignal,

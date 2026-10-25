@@ -1,6 +1,6 @@
-const db = require('../config/db');
+const service = require('../services/checkins.service');
 
-const VALID_LEVELS = ['LOW', 'MODERATE', 'GOOD', 'HIGH'];
+const { VALID_LEVELS, normalizeLevel } = service;
 
 // POST /api/checkins/:userId — create or update today's check-in
 async function postUserId(req,res,next){
@@ -14,7 +14,6 @@ async function postUserId(req,res,next){
       if (hours == null || Number(hours) < 0 || Number(hours) > 24) {
         return res.status(400).json({ error: 'sleepHours (0–24) is required' });
       }
-      const normalizeLevel = (v) => (v == null ? null : String(v).trim().toUpperCase());
       const qNorm = normalizeLevel(sleepQuality ?? sleep_quality);
       const stNorm = normalizeLevel(stressLevel ?? stress_level);
       const soNorm = normalizeLevel(soreness ?? soreness_level ?? sorenessLevel);
@@ -25,29 +24,13 @@ async function postUserId(req,res,next){
         }
       }
 
-      await db.execute(
-        `INSERT INTO daily_checkins
-         (user_id, checkin_date, sleep_hours, sleep_quality, stress_level, soreness_level, energy_level)
-         VALUES (?, CURDATE(), ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           sleep_hours = VALUES(sleep_hours),
-           sleep_quality = VALUES(sleep_quality),
-           stress_level = VALUES(stress_level),
-           soreness_level = VALUES(soreness_level),
-           energy_level = VALUES(energy_level)`,
-        [
-          userId, Number(hours),
-          qNorm,
-          stNorm,
-          soNorm,
-          eNorm,
-        ]
-      );
-
-      const [[row]] = await db.execute(
-        'SELECT * FROM daily_checkins WHERE user_id = ? AND checkin_date = CURDATE()',
-        [userId]
-      );
+      const row = await service.upsertTodayCheckin(userId, {
+        hours: Number(hours),
+        sleepQuality: qNorm,
+        stressLevel: stNorm,
+        sorenessLevel: soNorm,
+        energyLevel: eNorm,
+      });
       res.status(201).json({ success: true, checkin: row });
   }catch(e){ next(e); }
 }
@@ -56,11 +39,8 @@ async function postUserId(req,res,next){
 async function gettodayUserId(req,res,next){
   try{
       const { userId } = req.params;
-      const [rows] = await db.execute(
-        'SELECT *, checkin_date AS check_date, soreness_level AS soreness FROM daily_checkins WHERE user_id = ? AND checkin_date = CURDATE() LIMIT 1',
-        [userId]
-      );
-      res.json({ checkin: rows[0] || null });
+      const row = await service.getTodayCheckin(userId);
+      res.json({ checkin: row || null });
   }catch(e){ next(e); }
 }
 
@@ -69,12 +49,7 @@ async function gethistoryUserId(req,res,next){
   try{
       const { userId } = req.params;
       const days = Math.min(Math.max(parseInt(req.query.days) || 14, 1), 60);
-      const [rows] = await db.execute(
-        `SELECT checkin_date, checkin_date AS check_date, sleep_hours, sleep_quality, stress_level, soreness_level, soreness_level AS soreness, energy_level
-         FROM daily_checkins WHERE user_id = ? AND checkin_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-         ORDER BY checkin_date ASC`,
-        [userId, days]
-      );
+      const rows = await service.getCheckinHistory(userId, days);
       res.json({ history: rows || [] });
   }catch(e){ next(e); }
 }

@@ -3,7 +3,7 @@ import { apiGet, apiFetch } from '../lib/apiClient.js';
 import { safeGet, safeSet } from '../lib/storage.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 
-const ThemeContext = createContext();
+const ThemeContext = createContext(/** @type {any} */ (undefined));
 
 const THEME_STORAGE_KEY = 'vitalis_theme';
 
@@ -95,13 +95,22 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     if (!authUserId) return;
-    const hasLocalPref = Boolean(safeGet(THEME_STORAGE_KEY, null));
     let cancelled = false;
     fetchServerTheme().then((t) => {
-      if (!cancelled && t && !hasLocalPref && !hydratedFromServer.current) {
+      if (cancelled || hydratedFromServer.current) return;
+      // Re-read storage at resolve time: a quick toggle may have landed while
+      // the request was in flight — that local choice must win over the stale
+      // server value, otherwise the theme visibly snaps back.
+      const localNow = safeGet(THEME_STORAGE_KEY, null);
+      const hasLocalNow = localNow === 'light' || localNow === 'dark' || localNow === 'system';
+      if (t && !hasLocalNow) {
         hydratedFromServer.current = true;
         setPreferenceState(t);
         setTheme(resolveEffective(t));
+      } else if (hasLocalNow && t && serverSessionKnownGood) {
+        // Local choice is already on screen — publish it so the server
+        // (and other devices) stay in sync with what was just toggled.
+        persistServerTheme(localNow);
       }
     });
     return () => { cancelled = true; };
@@ -111,6 +120,10 @@ export const ThemeProvider = ({ children }) => {
     const root = document.documentElement;
     root.classList.remove('light-theme', 'dark-theme');
     root.classList.add(`${theme}-theme`);
+    // Keep the browser/PWA chrome (address bar, status bar) in step with the theme.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'light' ? '#f5f7f1' : '#0d110c');
     safeSet(THEME_STORAGE_KEY, preference);
     if (!authUserId) return;
     persistServerTheme(preference);

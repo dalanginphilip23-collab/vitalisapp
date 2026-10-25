@@ -1,0 +1,353 @@
+/* Logs / Progress — page-scoped layout.
+   The page keeps the real data widgets; this file only owns spacing,
+   responsive composition and the few controls that were previously
+   positioned with inline floats. */
+
+.log-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-page > *,
+.log-tab-panels,
+.log-training,
+.log-training__grid,
+.log-side,
+.log-main-col {
+  min-width: 0;
+}
+
+.log-page .po-card {
+  margin-bottom: 0;
+}
+
+/* ── Header summary + primary action ─────────────────────────────── */
+
+.log-head-actions {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.log-head-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  line-height: 1;
+}
+
+.log-head-date {
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.log-head-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(24px, 2.1vw, 31px);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.log-head-count small {
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.log-head-btn {
+  min-height: 42px;
+  padding-inline: 18px;
+  white-space: nowrap;
+}
+
+/* ── Section tabs ─────────────────────────────────────────────────── */
+
+.log-tabs {
+  gap: 4px;
+  padding: 5px;
+}
+
+.log-tab {
+  height: 42px;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding-inline: 15px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+}
+
+.log-tab .material-symbols-outlined {
+  font-size: 17px;
+}
+
+/* ── Training composition ─────────────────────────────────────────── */
+
+.log-training {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-training__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-calendar {
+  width: 100%;
+}
+
+.log-day-stats {
+  width: 100%;
+}
+
+.log-show-all {
+  align-self: stretch;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.log-sessions {
+  width: 100%;
+}
+
+.log-sessions .overflow-x-auto {
+  scrollbar-width: thin;
+}
+
+.log-sessions-list > * {
+  min-width: 0;
+}
+
+@media (min-width: 1240px) {
+  .log-training__grid {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    align-items: start;
+    gap: 18px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .log-training__grid {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+}
+
+/* ── Activity analytics ───────────────────────────────────────────── */
+
+.log-activity {
+  min-width: 0;
+}
+
+.log-activity__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.log-activity__controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.log-activity__seg {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-light);
+  border-radius: 11px;
+  background: var(--bg-hover);
+}
+
+.log-activity__seg-btn {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: capitalize;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.log-activity__seg-btn:hover {
+  color: var(--text-secondary);
+}
+
+.log-activity__seg-btn.is-active {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow: 0 3px 10px var(--accent-border);
+}
+
+.log-activity__bars {
+  display: grid;
+  width: 100%;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(34px, 1fr);
+  align-items: end;
+  gap: 6px;
+  padding: 16px 2px 2px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.log-activity__bars > div {
+  min-width: 32px;
+}
+
+.log-activity__track {
+  width: 100%;
+  max-width: 42px;
+  height: 112px;
+}
+
+.log-activity__value {
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.log-activity__label {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .log-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    overflow: visible;
+  }
+
+  .log-tab {
+    width: 100%;
+    height: 40px;
+    gap: 6px;
+    padding-inline: 6px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .log-tab .material-symbols-outlined {
+    font-size: 16px;
+  }
+
+  .log-activity__head {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .log-activity__controls {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .log-activity__seg {
+    flex: 0 0 auto;
+  }
+
+  .log-activity__seg-btn {
+    min-height: 29px;
+    padding-inline: 10px;
+  }
+
+  .log-activity__bars {
+    grid-auto-columns: minmax(32px, 1fr);
+    gap: 4px;
+    padding-top: 14px;
+  }
+
+  .log-activity__track {
+    height: 100px;
+  }
+
+  .log-activity__label {
+    font-size: 8px;
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (max-width: 639px) {
+  .log-head-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .log-head-summary {
+    align-items: flex-start;
+  }
+
+  .log-head-count {
+    font-size: 26px;
+  }
+
+  .log-head-btn {
+    min-height: 44px;
+    padding-inline: 16px;
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .log-activity__seg-btn {
+    transition: none;
+  }
+}

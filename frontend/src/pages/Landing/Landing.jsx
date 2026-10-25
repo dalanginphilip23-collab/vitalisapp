@@ -1,43 +1,130 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { apiGet, apiPost } from "../../lib/apiClient.js";
+import { getInstallEvent, clearInstallEvent, subscribeToInstall } from "../../lib/pwaInstall.js";
+import { TermsOfUseModal, PrivacyPolicyModal } from "../../features/user/Auth/Register/components/LegalModals.jsx";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
-import {
-  GYM_BG,
-  FEATURES,
-  STEPS,
-  NAV_LINKS,
-  formatCount,
-} from "./landingData.js";
+
+import "@fontsource/playfair-display/700.css";
+import "@fontsource/playfair-display/800.css";
+import "@fontsource/poppins/300.css";
+import "@fontsource/poppins/400.css";
+import "@fontsource/poppins/500.css";
+import "@fontsource/poppins/600.css";
+import "./landing.css";
+
+import { FEATURES, SERVICES, PLANS, FOOTER_LINKS, FOOTER_INFO, SUPPORT_INFO, NAV_LINKS, formatCount } from "./landingData.js";
 import {
   Icon,
+  Brand,
   Reveal,
-  SectionHeader,
-  MobileMenu,
-  FeatureCard,
+  RoundArrowPair,
+  PillCta,
+  QrCode,
+  HeroPhoneSet,
+  DownloadPhoneSet,
+  ProductTour,
+  FooterInfoModal,
+  FooterLink,
 } from "./components/LandingWidgets.jsx";
-import { TermsOfUseModal, PrivacyPolicyModal } from "../../features/Auth/Register/components/LegalModals.jsx";
 
-// Professional marketing page: Home + Features + About.
-// Theme-aware (follows the app light/dark theme), system fonts only,
-// one restrained reveal animation, no display type, no glow effects.
+// Vitalis marketing home. The layout, typography, and component proportions
+// are a close recreation of the supplied NEWME landing-page reference. The
+// content and destinations come from Vitalis so every action remains real.
 const Landing = () => {
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
   const { user } = useAuth();
   const isAuthenticated = !!user?.id;
-  const [legalView, setLegalView] = useState(null); // 'terms' | 'privacy' | null
 
-  // Live backend status for the footer badge (falls back to "checking" offline)
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [legalView, setLegalView] = useState(null);
+  const [footerInfo, setFooterInfo] = useState(null);
   const [systemStatus, setSystemStatus] = useState("checking");
-  // Real visitor count (unique IP-days, privacy-friendly). Null = still loading.
   const [visits, setVisits] = useState(null);
-  // Real active users (verified accounts able to use the system). Null = loading.
   const [activeUsers, setActiveUsers] = useState(null);
+  const [modules, setModules] = useState(null);
+  const [manualLogPct, setManualLogPct] = useState(null);
+  const [installEvent, setInstallEvent] = useState(null);
+  // Manual-install instructions panel (null = closed). Shown when the browser
+  // can't prompt: iPhone Safari, Firefox, or a prompt already used this visit.
+  const [installHelp, setInstallHelp] = useState(null);
+  // True when the PWA is already running as an installed app (or the user just
+  // accepted the install prompt). Then "Open on Home Screen" becomes a plain
+  // open-dashboard action instead of trying to install again.
+  const [installed, setInstalled] = useState(() => {
+    try {
+      return (
+        typeof window !== "undefined" &&
+        (window.matchMedia?.("(display-mode: standalone)")?.matches ||
+          window.matchMedia?.("(display-mode: minimal-ui)")?.matches ||
+          window.navigator?.standalone === true ||
+          // Persisted install marker: set when the user accepts the install
+          // prompt or appinstalled fires — the browser tab keeps it on later
+          // visits, so returning users see "Installed — Open Vitalis" even
+          // when they open the marketing page in a normal tab.
+          window.localStorage?.getItem("vitalis:installed") === "1")
+      );
+    } catch {
+      return false;
+    }
+  });
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(true);
 
+  const trackRef = useRef(null);
+
+  const goPrimary = useCallback(() => {
+    navigate(isAuthenticated ? "/dashboard" : "/register");
+  }, [isAuthenticated, navigate]);
+
+  const closeTour = useCallback(() => setTourOpen(false), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  const openLegal = useCallback((view) => {
+    setMenuOpen(false);
+    setLegalView(view);
+  }, []);
+
+  const openFooterInfo = useCallback((item) => {
+    setMenuOpen(false);
+    const info = item.label === "Help & support" ? SUPPORT_INFO : FOOTER_INFO[item.label];
+    if (info) setFooterInfo(info);
+  }, []);
+
+  const closeFooterInfo = useCallback(() => setFooterInfo(null), []);
+
+  const actOnFooterInfo = useCallback((info) => {
+    setFooterInfo(null);
+    if (info.email) {
+      // Anchor click (not location.href) — mailto never pushes a history entry
+      // and can't be swallowed by the SPA router or a PWA window.
+      try {
+        const anchor = document.createElement("a");
+        anchor.href = `mailto:${info.email}`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } catch {
+        window.location.href = `mailto:${info.email}`;
+      }
+      return;
+    }
+    if (info.to) {
+      navigate(info.to);
+      return;
+    }
+    if (info.href) {
+      window.setTimeout(() => {
+        document.querySelector(info.href)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  }, [navigate]);
+
+  // Real system status + real public visitor/member counts. These are the only
+  // metrics shown as statistics anywhere on the page.
   useEffect(() => {
     let cancelled = false;
     const run = () => {
@@ -46,42 +133,52 @@ const Landing = () => {
         .then(() => {
           if (!cancelled) setSystemStatus("operational");
         })
-        .catch((e) => {
-          if (!cancelled)
+        .catch((error) => {
+          if (!cancelled) {
             setSystemStatus(
-              e?.code === 'TIMEOUT' ||
-                e?.code === 'UPSTREAM' ||
-                e?.status === 0 ||
-                e?.status === 502 ||
-                e?.status === 503 ||
-                e?.status === 504
-                ? 'offline'
-                : 'degraded',
+              error?.code === "TIMEOUT" ||
+                error?.code === "UPSTREAM" ||
+                error?.status === 0 ||
+                error?.status === 502 ||
+                error?.status === 503 ||
+                error?.status === 504
+                ? "offline"
+                : "degraded"
             );
+          }
         });
-      // Record one visit per browser session, then read back the real total.
-      // Refresh-safe: UNIQUE(ip_hash, visit_date) dedupes on the backend.
+
       let shouldLog = true;
       try {
         shouldLog = !sessionStorage.getItem("vitalis:visitLogged");
-      } catch { shouldLog = true; }
+      } catch {
+        shouldLog = true;
+      }
       const markLogged = () => {
-        try { sessionStorage.setItem("vitalis:visitLogged", "1"); } catch { /* private mode */ }
+        try {
+          sessionStorage.setItem("vitalis:visitLogged", "1");
+        } catch {
+          /* private mode */
+        }
       };
       const readTotal = () => {
         apiGet("/api/public/landing-stats", { timeoutMs: 8000, skipAuthRedirect: true })
-          .then((d) => {
+          .then((data) => {
             if (cancelled) return;
-            if (Number.isFinite(Number(d?.stats?.visits))) setVisits(Number(d.stats.visits));
-            if (Number.isFinite(Number(d?.stats?.activeUsers))) setActiveUsers(Number(d.stats.activeUsers));
+            if (Number.isFinite(Number(data?.stats?.visits))) setVisits(Number(data.stats.visits));
+            if (Number.isFinite(Number(data?.stats?.activeUsers))) setActiveUsers(Number(data.stats.activeUsers));
+            if (Number.isFinite(Number(data?.stats?.modules))) setModules(Number(data.stats.modules));
+            if (Number.isFinite(Number(data?.stats?.manualLogPct))) setManualLogPct(Number(data.stats.manualLogPct));
           })
-          .catch(() => { /* offline — counts stay hidden */ });
+          .catch(() => {
+            /* offline — counts remain hidden */
+          });
       };
       if (shouldLog) {
         apiPost("/api/public/landing-visit", {}, { timeoutMs: 8000, skipAuthRedirect: true })
-          .then((d) => {
+          .then((data) => {
             markLogged();
-            if (!cancelled && Number.isFinite(Number(d?.visits))) setVisits(Number(d.visits));
+            if (!cancelled && Number.isFinite(Number(data?.visits))) setVisits(Number(data.visits));
             readTotal();
           })
           .catch(readTotal);
@@ -89,370 +186,770 @@ const Landing = () => {
         readTotal();
       }
     };
+
     let idleId = null;
     let timer = null;
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
       idleId = window.requestIdleCallback(run, { timeout: 2000 });
     } else {
-      timer = setTimeout(run, 300);
+      timer = window.setTimeout(run, 300);
     }
     return () => {
       cancelled = true;
       if (idleId && window.cancelIdleCallback) window.cancelIdleCallback(idleId);
-      if (timer) clearTimeout(timer);
+      if (timer) window.clearTimeout(timer);
     };
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
-    const handleResize = () => {
+    const onResize = () => {
       if (window.innerWidth >= 1024) setMenuOpen(false);
     };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
-  const goPrimary = () => navigate(isAuthenticated ? "/dashboard" : "/register");
+  useEffect(() => {
+    const onPromptAvailable = (event) => {
+      // beforeinstallprompt only fires when the app is NOT currently installed
+      // (Chrome re-fires it after an uninstall) — so clear the stale marker.
+      try {
+        window.localStorage?.removeItem("vitalis:installed");
+      } catch {
+        /* private mode */
+      }
+      setInstalled(false);
+      setInstallEvent(event);
+    };
+    const onInstalled = () => {
+      try {
+        window.localStorage?.setItem("vitalis:installed", "1");
+      } catch {
+        /* private mode */
+      }
+      setInstalled(true);
+      setInstallEvent(null);
+      setInstallHelp(null);
+    };
+    // ONE global beforeinstallprompt/appinstalled listener pair lives in
+    // lib/pwaInstall.js (attached at boot so the event can't be missed before
+    // hydration) — Landing just subscribes here. No duplicate listeners.
+    const unsubscribe = subscribeToInstall((message) => {
+      if (message?.type === "prompt-available") onPromptAvailable(message.event);
+      else if (message?.type === "installed") onInstalled();
+    });
+
+    // Pick up a prompt that fired while the route was still hydrating.
+    const early = getInstallEvent();
+    if (early) onPromptAvailable(early);
+
+    // Same-origin install check for users who installed earlier but are
+    // browsing in a normal tab right now (Chrome Android 84+, desktop 140+).
+    // Harmless no-op ([]) where unsupported (Safari, Firefox, older Chrome).
+    let cancelled = false;
+    try {
+      if (typeof navigator.getInstalledRelatedApps === "function") {
+        navigator
+          .getInstalledRelatedApps?.()
+          .then((apps) => {
+            if (
+              !cancelled &&
+              Array.isArray(apps) &&
+              apps.some((app) => app?.platform === "webapp")
+            ) {
+              setInstalled(true);
+              setInstallEvent(null);
+            }
+          })
+          .catch(() => {
+            /* unsupported or not in scope */
+          });
+      }
+    } catch {
+      /* unavailable */
+    }
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  // Platform-aware manual install steps shown when the native prompt is
+  // unavailable (iPhone Safari, Firefox, unsupported desktop browsers).
+  const openInstallHelp = useCallback(() => {
+    try {
+      const ua = navigator.userAgent || "";
+      const isIOS =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        const onSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+        setInstallHelp({ kind: "ios", inSafari: onSafari });
+        return;
+      }
+      setInstallHelp({ kind: /Android/.test(ua) ? "android" : "desktop" });
+    } catch {
+      setInstallHelp({ kind: "desktop" });
+    }
+  }, []);
+
+  // Carousel controls
+  const syncCarousel = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const max = track.scrollWidth - track.clientWidth;
+    setCanPrev(track.scrollLeft > 6);
+    setCanNext(track.scrollLeft < max - 6);
+  }, []);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return undefined;
+    syncCarousel();
+    track.addEventListener("scroll", syncCarousel, { passive: true });
+    window.addEventListener("resize", syncCarousel);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncCarousel) : null;
+    observer?.observe(track);
+    return () => {
+      track.removeEventListener("scroll", syncCarousel);
+      window.removeEventListener("resize", syncCarousel);
+      observer?.disconnect();
+    };
+  }, [syncCarousel]);
+
+  const moveCarousel = (direction) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const card = track.querySelector(".nn-feature-card");
+    if (!card) return;
+    const styles = window.getComputedStyle(track);
+    const gap = Number.parseFloat(styles.columnGap || styles.gap || "0") || 0;
+    track.scrollBy({ left: direction * (card.getBoundingClientRect().width + gap), behavior: "smooth" });
+  };
+
+  const handleInstall = async () => {
+    // Already installed (or running standalone): just open the app.
+    if (installed) {
+      navigate(isAuthenticated ? "/dashboard" : "/login");
+      return;
+    }
+    if (installEvent) {
+      installEvent.prompt();
+      const choice = await installEvent.userChoice.catch(() => null);
+      setInstallEvent(null);
+      // Prompt is single-use per page load — keep the module state in sync.
+      clearInstallEvent();
+      if (choice?.outcome === "accepted") {
+        try {
+          window.localStorage?.setItem("vitalis:installed", "1");
+        } catch {
+          /* private mode */
+        }
+        setInstalled(true);
+        return;
+      }
+      // Dismissed — no fake success; offer the manual steps instead.
+      openInstallHelp();
+      return;
+    }
+    // No prompt available (iPhone Safari, Firefox, or already used this
+    // session): show manual instructions here instead of navigating away.
+    openInstallHelp();
+  };
+
+  const registerUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/register` : "/register";
 
   const statusLabel =
-    systemStatus === "operational" ? "All systems operational"
-    : systemStatus === "checking" ? "Checking status…"
-    : systemStatus === "offline" ? "Backend unreachable"
-    : "Degraded — try again soon";
+    systemStatus === "operational"
+      ? "All systems operational"
+      : systemStatus === "checking"
+        ? "Checking status…"
+        : systemStatus === "offline"
+          ? "Backend unreachable"
+          : "Degraded — try again soon";
+
+  const statusClass =
+    systemStatus === "operational"
+      ? ""
+      : systemStatus === "checking"
+        ? " is-warn"
+        : " is-error";
+
+  const stats = [
+    { value: visits == null ? "—" : formatCount(visits), label: "Site visits" },
+    { value: activeUsers == null ? "—" : formatCount(activeUsers), label: "Active members" },
+    { value: modules == null ? "—" : formatCount(modules), label: "Integrated modules" },
+    { value: manualLogPct == null ? "—" : `${manualLogPct}%`, label: "Manual-first logging" },
+  ];
 
   return (
-    <>
-      <style>{`
-        /* Landing-only dark-mode refinement. The global dark theme uses an
-           electric-lime accent + green-tinted grays (neon-on-black = instant
-           AI look). Scope a mature palette here; the in-app theme is untouched.
-           Light theme already ships professional greens — no overrides needed. */
-        :root:not(.light-theme) .landing-scope,
-        .dark-theme .landing-scope {
-          --accent: #57B26A;
-          --accent-dark: #3E8A51;
-          --accent-light: #7CCB8D;
-          --accent-bg: rgba(87, 178, 106, 0.12);
-          --accent-border: rgba(87, 178, 106, 0.30);
-          --accent-hover: #6CC07D;
-          --text-secondary: #B9C0BB;
-          --text-muted: #8E968F;
-          --text-disabled: #6E7672;
-          --shadow-glow: none;
-        }
-        :root:not(.light-theme) .landing-scope img,
-        .dark-theme .landing-scope img { filter: saturate(0.92); }
-      `}</style>
-    <div
-      className="landing-scope w-full min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]"
-      style={{ fontFamily: "var(--font-sans)" }}
-    >
-      {/* ── Navigation ─────────────────────────────────────────────── */}
-      <header
-        className={`sticky top-0 z-[100] border-b transition-colors ${
-          scrolled
-            ? "bg-[var(--glass-bg)] backdrop-blur-md border-[var(--border-light)]"
-            : "bg-transparent border-transparent"
-        }`}
-      >
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-2.5"
-            aria-label="Vitalis home"
-          >
-            <img src="/pwa-192x192.png" alt="Vitalis logo" className="w-7 h-7 rounded-md" />
-            <span
-              className="text-[17px] font-extrabold tracking-tight"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Vitalis
-            </span>
-          </button>
-
-          <nav className="hidden lg:flex items-center gap-8" aria-label="Primary">
-            {NAV_LINKS.map(({ href, label }) => (
-              <a
-                key={href}
-                href={href}
-                className="text-[14px] font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                {label}
+    <div className="nn-root" id="top">
+      <header className={`nn-header ${scrolled ? "is-scrolled" : ""}`}>
+        <div className="nn-frame nn-header-inner">
+          <Brand />
+          <nav className="nn-nav" aria-label="Primary">
+            {NAV_LINKS.map((link) => (
+              <a key={link.href} href={link.href} className="nn-nav-link">
+                {link.label}
               </a>
             ))}
           </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
-            <button
-              onClick={() => navigate("/login")}
-              className="hidden sm:block px-4 py-2 text-[14px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              Sign in
+          <div className="nn-header-actions">
+            <ThemeToggle variant="landing" />
+            <button type="button" className="nn-contact" onClick={goPrimary}>
+              {isAuthenticated ? "Dashboard" : "Get Started"}
             </button>
             <button
-              onClick={goPrimary}
-              className="hidden sm:block px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--accent-hover)] transition-colors"
-            >
-              {isAuthenticated ? "Dashboard" : "Get started"}
-            </button>
-            <button
-              onClick={() => setMenuOpen((o) => !o)}
+              type="button"
+              className="nn-menu-toggle"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
-              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              aria-controls="landing-mobile-menu"
+              onClick={() => setMenuOpen((open) => !open)}
             >
-              <Icon name={menuOpen ? "close" : "menu"} className="text-[22px]" />
+              <Icon name={menuOpen ? "close" : "menu"} />
             </button>
           </div>
         </div>
       </header>
 
-      <MobileMenu open={menuOpen} onClose={closeMenu} navigate={navigate} />
-
       <main>
-        {/* ── Home / hero ──────────────────────────────────────────── */}
-        <section id="top" className="px-5 sm:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24">
-          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div>
-              <Reveal delay={0.05}>
-                <h1
-                  className="font-extrabold tracking-tight text-balance"
-                  style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.25rem, 5vw, 3.5rem)", lineHeight: 1.1 }}
-                >
-                  Training, nutrition, and recovery in one place.
-                </h1>
-              </Reveal>
-              <Reveal delay={0.1}>
-                <p className="mt-5 text-[16px] leading-relaxed text-[var(--text-muted)] max-w-xl">
-                  Vitalis helps you log workouts, meals, sleep, and runs, then
-                  turns those logs into readiness scores, trends, and training
-                  plans. Manual-first, free, and yours.
+        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        <section className="nn-hero" aria-labelledby="landing-hero-title">
+          <div className="nn-frame">
+            <div className="nn-hero-inner">
+              <div className="nn-hero-copy">
+                <Reveal>
+                  <h1 id="landing-hero-title" className="nn-display nn-hero-title">
+                    <span className="nn-line">Your Health,</span>
+                    <span className="nn-line">
+                      Our App<span className="nn-lime-dot" aria-hidden="true" />
+                    </span>
+                  </h1>
+                </Reveal>
+                <Reveal delay={0.06}>
+                  <p className="nn-lede">
+                    Training, nutrition, and recovery in one place. Vitalis turns the
+                    workouts, meals, sleep, and runs you log into clear readiness
+                    scores, trends, and plans — free and manual-first.
+                  </p>
+                </Reveal>
+                <Reveal delay={0.1}>
+                  <div className="nn-hero-cta-row">
+                    <PillCta onClick={goPrimary}>
+                      {isAuthenticated ? "Open Dashboard" : "Join Us Now"}
+                    </PillCta>
+                  </div>
+                </Reveal>
+
+                <Reveal delay={0.14}>
+                  <div className="nn-download-card">
+                    <a
+                      className="nn-qr"
+                      href={registerUrl}
+                      aria-label="Open the Vitalis registration page"
+                    >
+                      <QrCode />
+                    </a>
+                    <div className="nn-download-top">
+                      <h3>Install Our App</h3>
+                      <button
+                        type="button"
+                        className="nn-mini-arrow"
+                        onClick={goPrimary}
+                        aria-label={isAuthenticated ? "Open dashboard" : "Create an account"}
+                      >
+                        <Icon name="arrow_forward" />
+                      </button>
+                    </div>
+                    <div>
+                      <p className="nn-download-note">
+                        Scan the code to create a free account and add Vitalis to
+                        your home screen.
+                      </p>
+                      <div className="nn-download-stats">
+                        <div className="nn-download-stat">
+                          <strong>{modules == null ? "—" : modules}</strong>
+                          <span>App<br />modules</span>
+                        </div>
+                        <div className="nn-download-stat">
+                          <strong>Free</strong>
+                          <span>To get<br />started</span>
+                        </div>
+                        <div className="nn-avatars" aria-hidden="true">
+                          <span
+                            className="nn-avatar"
+                            style={{ backgroundImage: "url('/landing/hero-dumbbell.jpg')" }}
+                          />
+                          <span
+                            className="nn-avatar"
+                            style={{ backgroundImage: "url('/landing/service-nutrition.jpg')" }}
+                          />
+                          <span
+                            className="nn-avatar"
+                            style={{ backgroundImage: "url('/landing/service-hydration.jpg')" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              </div>
+
+              <div className="nn-hero-orbit">
+                <div className="nn-hero-panel" aria-hidden="true" />
+                <HeroPhoneSet />
+                <img
+                  className="nn-hero-photo"
+                  src="/landing/hero-cutout.png"
+                  alt=""
+                  aria-hidden="true"
+                  fetchPriority="high"
+                />
+                <button type="button" className="nn-play" onClick={() => setTourOpen(true)}>
+                  <span className="nn-play-ring">
+                    <Icon name="play_arrow" />
+                  </span>
+                  <span className="nn-play-label">See How It Works</span>
+                </button>
+                <p className="nn-hero-panel-copy">
+                  Real-time reps and form feedback, right in your browser.
                 </p>
-              </Reveal>
-              <Reveal delay={0.15}>
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={goPrimary}
-                    className="px-6 py-3 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)] text-[15px] font-semibold hover:bg-[var(--accent-hover)] transition-colors text-center"
-                  >
-                    {isAuthenticated ? "Open dashboard" : "Get started free"}
-                  </button>
-                  <a
-                    href="#features"
-                    className="px-6 py-3 rounded-lg border border-[var(--border-medium)] text-[15px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors text-center"
-                  >
-                    Explore features
+                <div className="nn-available-card">
+                  <p>Your health plan, on every device.</p>
+                  <a href="#download">
+                    Open Vitalis
+                    <span className="nn-available-arrow">
+                      <Icon name="arrow_forward" />
+                    </span>
                   </a>
                 </div>
-              </Reveal>
-              <Reveal delay={0.2}>
-                <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[var(--text-muted)]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Icon name="check" className="text-[16px] text-[var(--accent)]" />
-                    Free, no credit card
-                  </span>
-                  {visits !== null && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Icon name="visibility" className="text-[16px] text-[var(--accent)]" />
-                      {formatCount(visits)} site {visits === 1 ? "visit" : "visits"}
-                    </span>
-                  )}
-                  {activeUsers !== null && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Icon name="group" className="text-[16px] text-[var(--accent)]" />
-                      {formatCount(activeUsers)} active {activeUsers === 1 ? "user" : "users"}
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1.5" title="Live backend status">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        systemStatus === "operational" ? "bg-[var(--accent)]"
-                        : systemStatus === "checking" ? "bg-yellow-500"
-                        : "bg-red-500"
-                      }`}
-                    />
-                    {statusLabel}
-                  </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="nn-stats-wrap">
+            <div className="nn-frame">
+              <Reveal>
+                <div className="nn-stats" aria-label="Vitalis at a glance">
+                  {stats.map((stat) => (
+                    <div className="nn-stat" key={stat.label}>
+                      <strong>{stat.value}</strong>
+                      <span>{stat.label}</span>
+                    </div>
+                  ))}
                 </div>
               </Reveal>
             </div>
-
-            <Reveal delay={0.1}>
-              <figure className="relative">
-                <div className="rounded-2xl overflow-hidden border border-[var(--border-light)] shadow-[var(--shadow-lg)]">
-                  <img
-                    src={GYM_BG}
-                    alt="Athlete training with a barbell"
-                    className="w-full aspect-[4/3] object-cover"
-                    loading="eager"
-                  />
-                </div>
-                <div className="absolute -bottom-5 left-4 right-4 sm:left-6 sm:right-auto bg-[var(--bg-card)] border border-[var(--border-light)] rounded-xl shadow-[var(--shadow-md)] px-5 py-4 flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-lg bg-[var(--accent-bg)] flex items-center justify-center shrink-0">
-                    <Icon name="bedtime" className="text-[22px] text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <p className="text-[12px] font-medium text-[var(--text-muted)]">Readiness today</p>
-                    <p
-                      className="text-[20px] font-extrabold text-[var(--text-primary)] leading-tight"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      82 <span className="text-[13px] font-semibold text-[var(--text-muted)]">/ 100 · Ready to train</span>
-                    </p>
-                  </div>
-                </div>
-              </figure>
-            </Reveal>
           </div>
         </section>
 
-        {/* ── Features ─────────────────────────────────────────────── */}
-        <section id="features" className="px-5 sm:px-8 py-16 sm:py-24 bg-[var(--bg-secondary)] border-y border-[var(--border-light)] scroll-mt-16">
-          <div className="max-w-6xl mx-auto">
-            <SectionHeader
-              eyebrow="Features"
-              title="Everything you need to stay consistent"
-              lede="Four modules cover the full training loop. Each one reads from and writes to the same log, so nothing you enter is ever wasted."
-            />
-            <div className="grid sm:grid-cols-2 gap-4 sm:gap-5 mt-10 sm:mt-12">
-              {FEATURES.map((f, i) => (
-                <FeatureCard key={f.title} {...f} index={i} />
+        {/* ── Features ──────────────────────────────────────────────────── */}
+        <section id="features" className="nn-section nn-features" aria-labelledby="features-heading">
+          <div className="nn-frame">
+            <div className="nn-section-head">
+              <Reveal>
+                <h2 id="features-heading" className="nn-h2">
+                  Everything You Need<br />To Keep Moving
+                </h2>
+              </Reveal>
+              <div className="nn-section-aside">
+                <Reveal delay={0.06}>
+                  <p className="nn-lede">
+                    Four modules work as one system. Each reads from and writes to
+                    the same daily log, so nothing you track is ever wasted.
+                  </p>
+                </Reveal>
+                <Reveal delay={0.1}>
+                  <RoundArrowPair
+                    onPrev={() => moveCarousel(-1)}
+                    onNext={() => moveCarousel(1)}
+                    prevDisabled={!canPrev}
+                    nextDisabled={!canNext}
+                    prevLabel="Previous features"
+                    nextLabel="Next features"
+                  />
+                </Reveal>
+              </div>
+            </div>
+
+            <div
+              className="nn-feature-track"
+              ref={trackRef}
+              role="region"
+              aria-roledescription="carousel"
+              aria-label="Vitalis features"
+            >
+              {FEATURES.map((feature) => (
+                <article
+                  key={feature.title}
+                  className={`nn-feature-card ${feature.featured ? "is-featured" : ""}`}
+                >
+                  <div className="nn-feature-icon">
+                    <Icon name={feature.icon} />
+                  </div>
+                  <div className="nn-feature-spacer" />
+                  <h3>{feature.title}</h3>
+                  <p>{feature.desc}</p>
+                  {feature.featured && (
+                    <button type="button" className="nn-discover" onClick={goPrimary}>
+                      Discover More
+                    </button>
+                  )}
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── How it works ─────────────────────────────────────────── */}
-        <section className="px-5 sm:px-8 py-16 sm:py-24">
-          <div className="max-w-6xl mx-auto">
-            <SectionHeader
-              eyebrow="How it works"
-              title="From signup to insights in three steps"
-            />
-            <ol className="grid sm:grid-cols-3 gap-4 sm:gap-5 mt-10 sm:mt-12 list-none p-0 m-0">
-              {STEPS.map((s, i) => (
-                <Reveal key={s.num} delay={i * 0.06} className="h-full">
-                  <li className="h-full border border-[var(--border-light)] rounded-xl p-6 bg-[var(--bg-primary)]">
-                    <p
-                      className="text-[13px] font-extrabold text-[var(--accent)] mb-3"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {s.num}
-                    </p>
-                    <h3
-                      className="text-[16px] font-bold text-[var(--text-primary)] mb-2"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {s.title}
-                    </h3>
-                    <p className="text-[14px] leading-relaxed text-[var(--text-muted)]">
-                      {s.desc}
-                    </p>
-                  </li>
+        {/* ── Services / about the toolkit ──────────────────────────────── */}
+        <section id="about" className="nn-section nn-services" aria-labelledby="services-heading">
+          <div className="nn-frame">
+            <div className="nn-section-head">
+              <Reveal>
+                <h2 id="services-heading" className="nn-h2">
+                  The Whole Toolkit<br />Inside Vitalis
+                </h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="nn-lede">
+                  Nutrition, movement, sleep, and recovery are treated as one
+                  routine. Every screen is built around the data you actually log,
+                  not a generic dashboard.
+                </p>
+              </Reveal>
+            </div>
+            <div className="nn-service-grid">
+              {SERVICES.map((service, index) => (
+                <Reveal key={service.title} delay={index * 0.05}>
+                  <Link className="nn-service-card" to={service.to} aria-label={`${service.title} — open in Vitalis`}>
+                    <div className={`nn-service-media tone-${service.tone}`}>
+                      <img src={service.img} alt={service.alt} loading="lazy" />
+                    </div>
+                    <div className="nn-service-title-row">
+                      <h3>{service.title}</h3>
+                      <span className="nn-service-arrow">
+                        <Icon name="arrow_forward" />
+                      </span>
+                    </div>
+                    <p>{service.desc}</p>
+                  </Link>
                 </Reveal>
               ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* ── About ────────────────────────────────────────────────── */}
-        <section id="about" className="px-5 sm:px-8 py-16 sm:py-24 bg-[var(--bg-secondary)] border-t border-[var(--border-light)] scroll-mt-16">
-          <div className="max-w-6xl mx-auto">
-            <div className="max-w-2xl">
-            <Reveal>
-              <p className="text-[12px] font-bold text-[var(--accent)] uppercase tracking-[0.14em] mb-3">
-                About
-              </p>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <h2
-                className="font-extrabold tracking-tight text-balance"
-                style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.75rem, 4vw, 2.5rem)", lineHeight: 1.15 }}
-              >
-                A training companion that keeps things simple
-              </h2>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <p className="mt-5 text-[15px] leading-relaxed text-[var(--text-muted)]">
-                Vitalis is a student-built fitness companion for logging workouts,
-                meals, sleep, and runs. Your entries turn into readiness scores,
-                progress trends, and structured training plans — with a community
-                feed and private messaging to keep you connected. Manual-first,
-                free, and explainable: every insight traces back to data you
-                logged yourself.
-              </p>
-            </Reveal>
             </div>
           </div>
         </section>
 
+        {/* ── Pricing ───────────────────────────────────────────────────── */}
+        <section id="pricing" className="nn-section" aria-labelledby="pricing-heading">
+          <div className="nn-frame">
+            <div className="nn-section-head">
+              <Reveal>
+                <h2 id="pricing-heading" className="nn-h2">
+                  One Simple Plan<br />Free For Everyone
+                </h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="nn-lede">
+                  No trial timer, no credit card, and no locked features. Start
+                  with everything Vitalis offers and keep every insight you earn.
+                </p>
+              </Reveal>
+            </div>
+            <div className="nn-pricing-grid">
+              {PLANS.map((plan, index) => (
+                <Reveal key={plan.title} delay={index * 0.05}>
+                  <Link className="nn-plan-card" to={plan.to}>
+                    <div className="nn-plan-top">
+                      <span className="nn-plan-num">{plan.num}</span>
+                      <h3>{plan.title}</h3>
+                      <p>{plan.desc}</p>
+                    </div>
+                    <div className="nn-plan-footer">
+                      <span>
+                        <span className="nn-plan-price-label">{plan.label}</span>
+                        <span className="nn-plan-price">{plan.price}</span>
+                      </span>
+                      <span className="nn-plan-arrow">
+                        <Icon name="arrow_forward" />
+                      </span>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Download ──────────────────────────────────────────────────── */}
+        <section id="download" className="nn-section nn-download-section" aria-labelledby="download-heading">
+          <div className="nn-frame">
+            <Reveal>
+              <div className="nn-download-panel">
+                <h2 id="download-heading">
+                  Available Wherever<br />You Train
+                </h2>
+                <div className="nn-store-row">
+                  <button type="button" className="nn-store-badge is-lime" onClick={handleInstall}>
+                    <Icon name={installed ? "check_circle" : "add_to_home_screen"} />
+                    <span className="nn-store-copy">
+                      <small>{installEvent ? "Install now" : installed ? "Installed —" : "Open on"}</small>
+                      <strong>{installed ? "Open Vitalis" : "Home Screen"}</strong>
+                    </span>
+                  </button>
+                  <button type="button" className="nn-store-badge is-outline" onClick={goPrimary}>
+                    <Icon name="language" />
+                    <span className="nn-store-copy">
+                      <small>Works on</small>
+                      <strong>Any browser</strong>
+                    </span>
+                  </button>
+                </div>
+                {installHelp && !installed ? (
+                  <div className="nn-install-help" role="note" aria-live="polite">
+                    <div className="nn-install-help-head">
+                      <Icon
+                        name={
+                          installHelp.kind === "ios"
+                            ? "ios_share"
+                            : installHelp.kind === "android"
+                              ? "add_to_home_screen"
+                              : "downloading"
+                        }
+                      />
+                      <h4>
+                        {installHelp.kind === "ios"
+                          ? "Install from Safari"
+                          : installHelp.kind === "android"
+                            ? "Add to your home screen"
+                            : "Install Vitalis on your computer"}
+                      </h4>
+                      <button
+                        type="button"
+                        className="nn-install-help-close"
+                        onClick={() => setInstallHelp(null)}
+                        aria-label="Close installation instructions"
+                      >
+                        <Icon name="close" />
+                      </button>
+                    </div>
+                    {installHelp.kind === "ios" ? (
+                      <ol>
+                        {
+                          installHelp.inSafari ? null : (
+                            <li>Open this page in <strong>Safari</strong> first.</li>
+                          )
+                        }
+                        <li>
+                          Tap the <strong>Share</strong> icon{" "}
+                          <Icon name="ios_share" /> at the bottom of Safari.
+                        </li>
+                        <li>Scroll and choose <strong>Add to Home Screen</strong>.</li>
+                        <li>Tap <strong>Add</strong> to confirm.</li>
+                      </ol>
+                    ) : installHelp.kind === "android" ? (
+                      <ol>
+                        <li>Tap the <strong>⋮</strong> menu in your browser.</li>
+                        <li>
+                          Choose <strong>Add to Home screen</strong> (or{" "}
+                          <strong>Install app</strong>).
+                        </li>
+                        <li>
+                          Confirm — Vitalis then opens from your home screen
+                          like a native app.
+                        </li>
+                      </ol>
+                    ) : (
+                      <ol>
+                        <li>
+                          Look for the <strong>install icon</strong> in the
+                          address bar <Icon name="downloading" /> (Chrome, Edge).
+                        </li>
+                        <li>
+                          Or open the browser menu (<strong>⋮</strong> /{" "}
+                          <strong>⋯</strong>) → <strong>Install Vitalis</strong>.
+                        </li>
+                        <li>
+                          Other browsers run Vitalis right here — nothing to
+                          install.
+                        </li>
+                      </ol>
+                    )}
+                  </div>
+                ) : null}
+                <DownloadPhoneSet />
+              </div>
+            </Reveal>
+          </div>
+        </section>
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="border-t border-[var(--border-light)] bg-[var(--bg-secondary)]">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8">
-          <div className="py-10 sm:py-12">
-            <div className="flex items-center gap-2.5 mb-3">
-              <img src="/pwa-192x192.png" alt="Vitalis logo" className="w-7 h-7 rounded-md" />
-              <span
-                className="text-[17px] font-extrabold tracking-tight"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Vitalis
-              </span>
+      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      <footer className="nn-footer">
+        <div className="nn-frame">
+          <div className="nn-footer-main">
+            <div className="nn-footer-brand">
+              <Brand />
+              <p>
+                A student-built fitness companion for training, nutrition, and
+                recovery. Every insight traces back to something you logged.
+              </p>
             </div>
-            <p className="text-[14px] leading-relaxed text-[var(--text-muted)] max-w-sm">
-              A student-built fitness companion for training, nutrition, and recovery.
-            </p>
-            <nav className="mt-5 flex items-center gap-2 text-[13px] font-medium text-[var(--text-muted)]" aria-label="Legal">
-              <button
-                onClick={() => setLegalView('terms')}
-                className="hover:text-[var(--text-primary)] transition-colors"
-              >
-                Terms of Use
-              </button>
-              <span aria-hidden className="text-[var(--border-medium)]">·</span>
-              <button
-                onClick={() => setLegalView('privacy')}
-                className="hover:text-[var(--text-primary)] transition-colors"
-              >
-                Privacy Policy
-              </button>
-            </nav>
+
+            {FOOTER_LINKS.map((group) => (
+              <nav className="nn-footer-col" key={group.title} aria-label={group.title}>
+                <h3>{group.title}</h3>
+                <div className="nn-footer-links">
+                  {group.links.map((item) => (
+                    <FooterLink item={item} key={item.label} onLegal={openLegal} onInfo={openFooterInfo} />
+                  ))}
+                </div>
+              </nav>
+            ))}
+
+            <div className="nn-footer-action">
+              <PillCta onClick={goPrimary}>
+                {isAuthenticated ? "Dashboard" : "Join Us Now"}
+              </PillCta>
+              <div className="nn-socials">
+                <button
+                  type="button"
+                  className="nn-social"
+                  aria-label="Contact customer service"
+                  title="Contact customer service"
+                  onClick={() => setFooterInfo(SUPPORT_INFO)}
+                >
+                  <Icon name="support_agent" />
+                </button>
+                <button
+                  type="button"
+                  className="nn-social"
+                  aria-label="Terms of Use"
+                  onClick={() => openLegal("terms")}
+                >
+                  <Icon name="description" />
+                </button>
+                <button
+                  type="button"
+                  className="nn-social"
+                  aria-label="Privacy Policy"
+                  onClick={() => openLegal("privacy")}
+                >
+                  <Icon name="shield" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="h-px bg-[var(--border-light)]" />
-
-          <div className="py-5 flex flex-row items-center justify-between gap-3">
-            <p className="text-[13px] text-[var(--text-muted)]">
-              © 2026 Vitalis Labs Inc.
-            </p>
-            <p className="inline-flex items-center gap-2 text-[13px] text-[var(--text-muted)]" title="Live backend status">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  systemStatus === "operational" ? "bg-[var(--accent)]"
-                  : systemStatus === "checking" ? "bg-yellow-500"
-                  : "bg-red-500"
-                }`}
-              />
-              {statusLabel}
-            </p>
+          <div className="nn-footer-bottom">
+            <div className="nn-footer-bottom-left">
+              <span>© 2026 Vitalis Labs</span>
+              <button type="button" onClick={() => openLegal("terms")}>Terms of Use</button>
+              <button type="button" onClick={() => openLegal("privacy")}>Privacy Policy</button>
+            </div>
+            <div className="nn-footer-bottom-right">
+              <span className="nn-status" title="Live backend status" aria-live="polite">
+                <span className={`nn-status-dot${statusClass}`} />
+                {statusLabel}
+              </span>
+            </div>
           </div>
         </div>
       </footer>
 
-      <TermsOfUseModal isOpen={legalView === 'terms'} onClose={() => setLegalView(null)} />
-      <PrivacyPolicyModal isOpen={legalView === 'privacy'} onClose={() => setLegalView(null)} />
+      {menuOpen && (
+        <div
+          className="nn-mobile-menu"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeMenu();
+          }}
+        >
+          <div
+            className="nn-mobile-sheet"
+            id="landing-mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
+          >
+            <div className="nn-mobile-top">
+              <Brand href="#top" />
+              <button type="button" className="nn-mobile-close" onClick={closeMenu} aria-label="Close menu">
+                <Icon name="close" />
+              </button>
+            </div>
+            <nav className="nn-mobile-links" aria-label="Mobile primary">
+              {NAV_LINKS.map((link) => (
+                <a key={link.href} href={link.href} onClick={closeMenu}>
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <div className="nn-mobile-actions">
+              <ThemeToggle variant="landing-mobile" />
+              <button
+                type="button"
+                className="nn-mobile-signin"
+                onClick={() => {
+                  closeMenu();
+                  navigate("/login");
+                }}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className="nn-contact"
+                onClick={() => {
+                  closeMenu();
+                  goPrimary();
+                }}
+              >
+                {isAuthenticated ? "Open Dashboard" : "Get Started"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tourOpen && (
+        <ProductTour
+          open={tourOpen}
+          onClose={closeTour}
+          onPrimary={() => {
+            closeTour();
+            goPrimary();
+          }}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
+
+      <FooterInfoModal info={footerInfo} onClose={closeFooterInfo} onAction={actOnFooterInfo} />
+
+      <TermsOfUseModal isOpen={legalView === "terms"} onClose={() => setLegalView(null)} />
+      <PrivacyPolicyModal isOpen={legalView === "privacy"} onClose={() => setLegalView(null)} />
     </div>
-    </>
   );
 };
 

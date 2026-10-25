@@ -1,8 +1,8 @@
 export default function ErrorState({ message='Something went wrong.', onRetry=null }) {
   return (
-    <div role="alert" className="p-6 rounded-2xl bg-[var(--error-bg)] border border-[var(--error)]/20 text-[var(--error)] text-sm flex flex-col gap-3 items-start">
-      <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[18px]">error</span>{message}</span>
-      {onRetry && <button onClick={onRetry} className="px-4 py-2.5 min-h-[44px] rounded-xl bg-[var(--error)] text-white text-xs font-bold uppercase tracking-widest hover:brightness-110">Retry</button>}
+    <div role="alert" className="p-5 rounded-[var(--radius-lg)] bg-[var(--error-bg)] border border-[var(--error)]/25 text-[var(--error)] text-[length:var(--fs-14)] flex flex-col gap-3 items-start">
+      <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[length:var(--fs-18)]">error</span>{message}</span>
+      {onRetry && <button onClick={onRetry} className="px-4 py-2.5 min-h-[44px] rounded-[var(--radius-md)] bg-[var(--error)] text-white text-[length:var(--fs-13)] font-semibold hover:brightness-110 transition-[filter]">Retry</button>}
     </div>
   );
 }

@@ -18,12 +18,32 @@ const EXPECTED = [
   '024_user_plan_progress.sql', '025_user_plans.sql', '026_user_profiles.sql',
   '027_user_sessions.sql', '028_user_settings.sql', '029_workout_logs.sql',
   '030_seeds.sql', '031_landing_visits.sql', '032_personal_plans.sql',
+  '033_user_allergies.sql', '034_workout_sets.sql', '035_training_preferences.sql',
+  '036_account_governance.sql', '037_meal_type_food_catalog.sql',
+  '038_progress_module.sql', '039_admin_audit.sql', '040_admin_seed.sql',
+  '041_goal_recalibration.sql', '042_progress_cadence.sql',
 ];
 
 describe('migrations per-table baseline', () => {
-  it('migrations/ holds exactly the 32 canonical files', () => {
+  it('migrations/ holds exactly the 42 canonical files', () => {
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
     assert.deepEqual(files, EXPECTED);
+  });
+
+  it('admin seed promotes admin@gmail.com idempotently without resetting passwords', () => {
+    const sql = read('040_admin_seed.sql');
+    assert.match(sql, /'admin@gmail\.com'/);
+    assert.match(sql, /'admin'/);
+    assert.match(sql, /ON DUPLICATE KEY UPDATE/);
+    assert.match(sql, /\$2[aby]\$10\$/);
+    assert.doesNotMatch(sql, /UPDATE `?password`?/);
+  });
+
+  it('user_allergies is idempotent, uniquely keyed and cascades', () => {
+    const sql = read('033_user_allergies.sql');
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `user_allergies`/);
+    assert.match(sql, /UNIQUE KEY `uniq_user_allergy` \(`user_id`,`allergy_name`\)/);
+    assert.match(sql, /ON DELETE CASCADE/);
   });
 
   it('parents sort before children (users/plans first)', () => {
@@ -70,5 +90,67 @@ describe('migrations per-table baseline', () => {
     for (const t of ['community_posts', 'community_likes', 'community_comments']) {
       assert.ok(communityCtrl.includes(t), `controller must reference ${t}`);
     }
+  });
+
+  it('workout_sets is idempotent, cascades and normalizes storage', () => {
+    const sql = read('034_workout_sets.sql');
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `workout_sets`/);
+    assert.match(sql, /KEY `idx_workout_sets_log`/);
+    assert.match(sql, /REFERENCES `workout_logs` \(`id`\) ON DELETE CASCADE/);
+    assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE CASCADE/);
+    assert.match(sql, /ADD COLUMN `paused_seconds`/);
+    assert.match(sql, /ADD COLUMN `pause_started_at`/);
+    assert.match(sql, /ADD COLUMN `difficulty_rating`/);
+    assert.match(sql, /ADD COLUMN `session_notes`/);
+  });
+
+  it('training_preferences is idempotent, one row per user with JSON inputs', () => {
+    const sql = read('035_training_preferences.sql');
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `training_preferences`/);
+    assert.match(sql, /UNIQUE KEY `uniq_training_prefs_user` \(`user_id`\)/);
+    assert.match(sql, /`equipment` json/);
+    assert.match(sql, /`preferred_days` json/);
+    assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE CASCADE/);
+  });
+
+  it('account governance extends users with consent, status and role', () => {
+    const sql = read('036_account_governance.sql');
+    assert.match(sql, /ADD COLUMN `accepted_terms_at`/);
+    assert.match(sql, /ADD COLUMN `accepted_terms_version`/);
+    assert.match(sql, /ADD COLUMN `status` varchar\(20\) NOT NULL DEFAULT 'active'/);
+    assert.match(sql, /ADD COLUMN `role` varchar\(20\) NOT NULL DEFAULT 'member'/);
+  });
+
+  it('food logs persist meal_type and the catalog seeds are idempotent', () => {
+    const sql = read('037_meal_type_food_catalog.sql');
+    assert.match(sql, /ADD COLUMN `meal_type` varchar\(20\) DEFAULT NULL AFTER `serving`/);
+    // Legacy backfill only for the whitelisted slots and only once (NULL guard).
+    assert.match(sql, /SET `meal_type` = `serving`/);
+    assert.match(sql, /WHERE `meal_type` IS NULL/);
+    assert.match(sql, /'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Other'/);
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `food_catalog`/);
+    assert.match(sql, /UNIQUE KEY `uniq_food_catalog_name`/);
+    assert.match(sql, /INSERT IGNORE INTO `food_catalog`/);
+  });
+
+  it('progress module stores private photos with AI fields and per-day measurements', () => {
+    const sql = read('038_progress_module.sql');
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `progress_photos`/);
+    assert.match(sql, /`pose` varchar\(10\) NOT NULL/);
+    assert.match(sql, /`image_data` mediumtext/);
+    assert.match(sql, /`ai_rating` tinyint/);
+    assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE CASCADE/);
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `body_measurements`/);
+    assert.match(sql, /UNIQUE KEY `uniq_body_meas_user_day`/);
+    assert.match(sql, /`user_id`,`recorded_at`/);
+  });
+
+  it('admin audit log survives target deletion (SET NULL snapshot pattern)', () => {
+    const sql = read('039_admin_audit.sql');
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `admin_actions`/);
+    assert.match(sql, /`admin_user_id` int\(11\) NOT NULL/);
+    assert.match(sql, /`target_user_id` int\(11\) DEFAULT NULL/);
+    assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE CASCADE/);
+    assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE SET NULL/);
   });
 });

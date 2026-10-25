@@ -29,9 +29,9 @@ const AuthContext = createContext({
   user: null,
   loading: true,
   sessionValid: null,
-  refreshAuth: async () => {},
+  refreshAuth: async () => false,
   logout: async () => {},
-  setUser: () => {},
+  setUser: /** @type {import('react').Dispatch<any>} */ (() => {}),
 });
 
 export const AuthProvider = ({ children }) => {
@@ -56,8 +56,9 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   // True when the /me cookie probe succeeds (catches blocked third-party cookies).
-  const refreshAuth = async () => {
-    setLoading(true);
+  // Silent refreshes keep the current screen mounted (used after profile saves).
+  const refreshAuth = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await apiFetch('/api/auth/me', { timeoutMs: 5000, skipAuthRedirect: true });
 
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       // keep previous user only if fresh; just stop loading
       return false;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

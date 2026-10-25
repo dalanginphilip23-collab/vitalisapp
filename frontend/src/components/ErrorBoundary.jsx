@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component {
       if (this.props.fallback) return this.props.fallback;
       return (
         <div role="alert" className="min-h-[40dvh] flex flex-col items-center justify-center gap-3 p-8 text-center">
-          <span className="material-symbols-outlined text-[36px] text-[var(--text-muted)]">error</span>
+          <span className="material-symbols-outlined text-[length:var(--fs-36)] text-[var(--text-muted)]">error</span>
           <p className="text-sm font-bold text-[var(--text-primary)]">Something went wrong</p>
           <p className="text-xs text-[var(--text-muted)] max-w-[36ch]">{this.state.message}</p>
           <div className="flex gap-2">

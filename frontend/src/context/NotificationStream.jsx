@@ -3,7 +3,9 @@ import React, { createContext, useCallback, useContext, useEffect, useRef } from
 import { API_BASE_URL } from '../app/config/env.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 
-const NotificationStreamContext = createContext({ subscribe: () => () => {} });
+const NotificationStreamContext = createContext({
+  subscribe: /** @type {(fn: (notification: any) => void) => () => void} */ (() => () => {}),
+});
 
 export const NotificationStreamProvider = ({ children }) => {
   const { user, sessionValid } = useAuth();

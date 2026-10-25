@@ -14,11 +14,13 @@ const aiRouteLimiter = makeLimiter({
 });
 
 router.post('/analyze-pose', verifyUser, aiRouteLimiter, aiQuota, controller.postanalyzePose);
-router.post('/ai-chat', verifyUser, aiRouteLimiter, aiQuota, controller.postaiChat);
-router.post('/ai/clinical-analysis', verifyUser, aiRouteLimiter, aiQuota, controller.postaiClinicalAnalysis);
+router.post('/ai/analysis', verifyUser, aiRouteLimiter, aiQuota, controller.postaiFitnessAnalysis);
+// Backward-compatible alias — older clients still call the clinical-analysis path
+router.post('/ai/clinical-analysis', verifyUser, aiRouteLimiter, aiQuota, controller.postaiFitnessAnalysis);
 router.post('/ai/coach', verifyUser, aiRouteLimiter, aiQuota, controller.postaiCoach);
 router.get('/ai/history/:userId', verifyUser, requireOwner('userId'), controller.getaiHistoryUserId);
 router.get('/logs/latest/:userId', verifyUser, requireOwner('userId'), controller.getlogsLatestUserId);
 router.post('/ai/run-analysis', verifyUser, aiRouteLimiter, aiQuota, controller.postaiRunAnalysis);
+router.get('/ai/summary', verifyUser, controller.getaiDailySummary);
 
 module.exports=router;

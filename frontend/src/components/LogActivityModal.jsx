@@ -52,7 +52,7 @@ const LogActivityModal = ({ isOpen, onClose, onSave }) => {
         {error && (
           <p
             role="alert"
-            className="text-[11px] font-bold text-[var(--error)] bg-[var(--error-bg)] border border-[var(--error)]/30 rounded-xl px-3 py-2"
+            className="text-[length:var(--fs-11)] font-bold text-[var(--error)] bg-[var(--error-bg)] border border-[var(--error)]/30 rounded-xl px-3 py-2"
           >
             {error}
           </p>

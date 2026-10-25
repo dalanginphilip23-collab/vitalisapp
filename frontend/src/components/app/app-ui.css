@@ -1,0 +1,457 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Vitalis app UI — shared authenticated shell + page primitives.
+   Scoped under `.vapp` (AppShell) so public/auth pages never inherit it.
+   Every colour, radius and shadow comes from the existing theme tokens.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.vapp {
+  --app-rail: var(--sidebar-w-expanded);
+  --app-rail-collapsed: var(--sidebar-w-collapsed);
+  --app-topbar: 64px;
+  --app-gap: 16px;
+  min-height: 100dvh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+@media (min-width: 768px) {
+  .vapp { --app-topbar: 72px; }
+}
+
+/* ── Topbar ────────────────────────────────────────────────────────── */
+.vapp .app-topbar {
+  height: var(--app-topbar);
+  padding-inline: 14px;
+}
+.vapp .app-topbar.app-rail-offset { left: 0; }
+@media (min-width: 768px) {
+  .vapp .app-topbar { padding-inline: 20px; }
+  .vapp .app-topbar.app-rail-offset {
+    left: var(--app-rail);
+    transition-duration: var(--duration-sidebar);
+  }
+  .vapp.is-sidebar-collapsed .app-topbar.app-rail-offset {
+    left: var(--app-rail-collapsed);
+  }
+}
+
+.vapp .app-mobile-title {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+.vapp .app-mobile-logo {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+}
+.vapp .app-mobile-title-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+/* ── Pill navigation (retired — topbar now uses quick jump) ─────────── */
+
+/* ── Topbar quick jump (replaces duplicated pill navigation) ────────── */
+.app-quickjump {
+  position: relative;
+  width: clamp(210px, 24vw, 340px);
+  min-width: 0;
+}
+.app-quickjump-field {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px 0 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: var(--bg-hover);
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.app-quickjump-field:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.app-quickjump-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 18px;
+}
+.app-quickjump-field input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.app-quickjump-field input:focus,
+.app-quickjump-field input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.app-quickjump-field input::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.app-quickjump-kbd {
+  flex-shrink: 0;
+  padding: 2px 5px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+}
+.app-quickjump-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 0;
+  width: max(100%, 280px);
+  max-height: 326px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
+  scrollbar-width: thin;
+}
+.app-quickjump-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.app-quickjump-item[data-active='true'] {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.app-quickjump-item-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.app-quickjump-item[data-active='true'] .app-quickjump-item-icon {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+.app-quickjump-item-label { min-width: 0; flex: 1; }
+.app-quickjump-current {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.app-quickjump-empty {
+  margin: 0;
+  padding: 16px 12px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: center;
+}
+@media (max-width: 1023px) {
+  .app-quickjump { width: clamp(200px, 30vw, 280px); }
+}
+@media (max-width: 767px) {
+  .app-quickjump { display: none; }
+}
+
+/* ── Main layout ───────────────────────────────────────────────────── */
+.vapp .app-main {
+  min-height: 100dvh;
+  padding-top: var(--app-topbar);
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  transition: margin-left var(--duration-sidebar) var(--ease-default);
+}
+@media (min-width: 768px) {
+  .vapp .app-main {
+    margin-left: var(--app-rail);
+    padding-bottom: 44px;
+  }
+  .vapp.is-sidebar-collapsed .app-main {
+    margin-left: var(--app-rail-collapsed);
+  }
+}
+.vapp .app-main--flush { padding-bottom: 0; }
+.vapp .app-main--workbench {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+.vapp .app-workbench {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Content containers ────────────────────────────────────────────── */
+.vapp .app-container {
+  width: 100%;
+  max-width: 1420px;
+  margin-inline: auto;
+  padding: 16px 16px 28px;
+}
+@media (min-width: 640px) {
+  .vapp .app-container { padding-inline: 22px; }
+}
+@media (min-width: 1024px) {
+  .vapp .app-container { padding: 20px 28px 40px; }
+}
+.vapp .app-container--narrow { max-width: 1120px; }
+.vapp .app-container--reading { max-width: 900px; }
+
+/* ── Page header ───────────────────────────────────────────────────── */
+.vapp .app-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 22px;
+  margin: 2px 0 20px;
+}
+.vapp .app-page-head-copy {
+  min-width: 0;
+  max-width: 720px;
+}
+.vapp .app-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.vapp .app-eyebrow::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.vapp .app-page-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(31px, 2.7vw, 44px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+.vapp .app-page-title em {
+  color: var(--accent);
+  font-style: normal;
+}
+.vapp .app-page-sub {
+  max-width: 600px;
+  margin: 9px 0 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+.vapp .app-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+@media (max-width: 639px) {
+  .vapp .app-page-head { align-items: flex-start; margin-bottom: 16px; }
+  .vapp .app-page-title { font-size: 30px; }
+  .vapp .app-page-sub { font-size: 12px; }
+  .vapp .app-page-actions { width: 100%; }
+}
+
+/* ── Shared page actions ───────────────────────────────────────────── */
+.vapp .app-btn {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.vapp .app-btn:active { transform: scale(0.97); }
+.vapp .app-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.vapp .app-btn--primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.vapp .app-btn--primary:hover { background: var(--accent-dark); }
+.vapp .app-btn--outline {
+  border-color: var(--border-medium);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+.vapp .app-btn--outline:hover { background: var(--bg-hover); color: var(--text-primary); }
+.vapp .app-btn--ghost {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+.vapp .app-btn--ghost:hover { background: var(--bg-active); color: var(--text-primary); }
+.vapp .app-btn--sm { min-height: 36px; padding: 0 13px; font-size: 11px; }
+
+.vapp .app-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.vapp .app-text-link:hover { text-decoration: underline; }
+
+/* ── Card primitives (available to any page that wants the dashboard look) ── */
+.vapp .app-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border-light);
+  border-radius: 21px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+@media (min-width: 1280px) {
+  .vapp .app-card { padding: 21px 22px; }
+}
+.vapp .app-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.vapp .app-card-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+.vapp .app-card-sub {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.vapp .app-chip {
+  display: inline-flex;
+  height: 26px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.vapp .app-chip--accent {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Shared segmented tabs used by Progress, Plans, Recovery and Activity. */
+.vapp .app-tabs {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  overflow-x: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: var(--bg-card);
+  scrollbar-width: none;
+}
+.vapp .app-tabs::-webkit-scrollbar { display: none; }
+.vapp .app-tab {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.vapp .app-tab:hover { color: var(--text-primary); }
+.vapp .app-tab[aria-selected='true'],
+.vapp .app-tab[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Consistent focus ring for new interactive elements. */
+.vapp .app-btn:focus-visible,
+.vapp .app-tab:focus-visible,
+.vapp .app-text-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

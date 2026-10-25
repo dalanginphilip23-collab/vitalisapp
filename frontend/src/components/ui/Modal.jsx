@@ -11,16 +11,16 @@ const SIZES = {
 };
 
 export default function Modal({
-  isOpen,
-  onClose,
-  title,
-  subtitle,
-  icon,
+  isOpen = false,
+  onClose = undefined,
+  title = undefined,
+  subtitle = undefined,
+  icon = undefined,
   size = 'md',
   closeOnBackdrop = true,
   closeOnEsc = true,
-  children,
-  footer,
+  children = undefined,
+  footer = undefined,
   hideClose = false,
   className = '',
   headerClassName = '',
@@ -83,7 +83,7 @@ export default function Modal({
     <>
       <style>{`@keyframes modalBackdropIn{from{opacity:0}to{opacity:1}}@keyframes modalCardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div
-        className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-black/60"
+        className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-[var(--bg-overlay)] backdrop-blur-[2px]"
         style={{ animation: 'modalBackdropIn 0.2s ease forwards', paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))', paddingTop: 'max(16px, env(safe-area-inset-top, 0px))' }}
         onMouseDown={(e) => {
           if (closeOnBackdrop && e.target === e.currentTarget) onClose?.();
@@ -95,7 +95,7 @@ export default function Modal({
         <div
           ref={cardRef}
           tabIndex={-1}
-          className={`bg-[var(--bg-card)] shadow-2xl border border-[var(--border-light)] w-full ${sizeClass} rounded-2xl overflow-hidden flex flex-col max-h-[90vh] outline-none ${className}`}
+          className={`bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] border border-[var(--border-medium)] w-full ${sizeClass} rounded-[var(--radius-xl)] overflow-hidden flex flex-col max-h-[90vh] outline-none ${className}`}
           style={{ animation: 'modalCardIn 0.25s var(--ease-default) forwards' }}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -105,12 +105,12 @@ export default function Modal({
               <div className="flex items-center gap-3 min-w-0">
                 {icon && (
                   <div className="w-8 h-8 rounded-lg bg-[var(--bg-hover)] border border-[var(--border-light)] flex items-center justify-center shrink-0">
-                    <Icon name={icon} className="text-[16px] text-[var(--accent)]" />
+                    <Icon name={icon} className="text-[length:var(--fs-16)] text-[var(--accent)]" />
                   </div>
                 )}
                 <div className="min-w-0">
-                  {title && <h3 id={titleId} className="text-[14px] font-bold text-[var(--text-primary)] leading-tight break-words">{title}</h3>}
-                  {subtitle && <p className="text-[11px] text-[var(--text-muted)] mt-0.5 break-words">{subtitle}</p>}
+                  {title && <h3 id={titleId} className="text-[length:var(--fs-14)] font-bold text-[var(--text-primary)] leading-tight break-words">{title}</h3>}
+                  {subtitle && <p className="text-[length:var(--fs-11)] text-[var(--text-muted)] mt-0.5 break-words">{subtitle}</p>}
                 </div>
               </div>
               {!hideClose && (
@@ -119,7 +119,7 @@ export default function Modal({
                   className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-active)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0"
                   aria-label="Close dialog"
                 >
-                  <Icon name="close" className="text-[16px]" />
+                  <Icon name="close" className="text-[length:var(--fs-16)]" />
                 </button>
               )}
             </div>

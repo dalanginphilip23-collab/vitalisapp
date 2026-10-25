@@ -1,4 +1,4 @@
-const Icon = ({ name, className = '', fill = 0, weight = 300, style }) => (
+const Icon = ({ name, className = '', fill = 0, weight = 300, style = undefined }) => (
   <span
     aria-hidden="true"
     className={`material-symbols-outlined leading-none select-none ${className}`}

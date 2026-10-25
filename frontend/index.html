@@ -6,7 +6,21 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0e0e0e" />
+    <meta name="theme-color" content="#0d110c" />
+    <script>
+      /* No-flash theme init: apply the saved theme class before first paint.
+         Mirrors ThemeContext (key: vitalis_theme; values: light|dark|system). */
+      (function () {
+        try {
+          var pref = localStorage.getItem('vitalis_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = pref === 'dark' || (!pref || pref === 'system') ? (pref === 'dark' || prefersDark) : false;
+          document.documentElement.classList.add(dark ? 'dark-theme' : 'light-theme');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#0d110c' : '#f5f7f1');
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content="Vitalis — AI-powered fitness tracking, nutrition, sleep and coaching." />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Vitalis — AI-powered fitness tracking" />

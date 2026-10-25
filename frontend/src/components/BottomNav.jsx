@@ -22,12 +22,13 @@ function normalize(items) {
 // Plus (+) sheet: MealTracker / Jogging / Community / Messenger / Recovery
 // (+ Manual Log entry when a log handler is provided).
 // `variant` / `items` props are kept for backward compat but no longer change the menu.
+// All handler/item props are optional — pages pass only what they need.
 const BottomNav = ({
-  items,
-  onCenterAction,
-  onLogActivity,
-  onFeedback,
-  onManualLog,
+  items = DEFAULT_ITEMS,
+  onCenterAction = null,
+  onLogActivity = null,
+  onFeedback = null,
+  onManualLog = null,
   ..._legacy
 }) => {
   void _legacy;
@@ -91,14 +92,14 @@ const BottomNav = ({
       onClick={() => handleNavClick(item.path)}
       aria-label={item.label}
       title={item.label}
-      className={`flex items-center justify-center gap-1.5 h-11 rounded-full transition-all duration-150 shrink-0 min-h-[44px] ${
+      className={`flex items-center justify-center gap-1 h-11 rounded-full transition-all duration-150 shrink-0 min-h-[44px] ${
         isActive
-          ? 'bg-[var(--nav-fg)] text-[var(--nav-bg)] px-4 shadow-sm'
+          ? 'bg-[var(--nav-fg)] text-[var(--nav-bg)] px-3 shadow-sm'
           : 'text-[var(--nav-fg-muted)] hover:text-[var(--nav-fg)] w-11'
       }`}
     >
-      <Icon name={item.icon} className="text-[20px]" fill={isActive ? 1 : 0} />
-      {isActive && <span className="text-[11px] font-bold capitalize">{item.label}</span>}
+      <Icon name={item.icon} className="text-[length:var(--fs-20)]" fill={isActive ? 1 : 0} />
+      {isActive && <span className="text-[length:var(--fs-11)] font-bold capitalize">{item.label}</span>}
     </button>
   );
 
@@ -186,7 +187,7 @@ const BottomNav = ({
         aria-label="Main navigation"
       >
         <div className="pointer-events-auto flex items-center gap-1 w-full max-w-[400px] justify-between relative min-w-0">
-          <div className="flex-1 flex items-center justify-around gap-1 px-2 py-1.5 bg-[var(--nav-bg)] border border-white/10 rounded-full shadow-lg min-w-0 overflow-x-auto no-scrollbar">
+          <div className="flex-1 flex items-center justify-around gap-1 px-2 py-1.5 bg-[var(--nav-bg)] border border-[var(--border-medium)] rounded-full shadow-[var(--shadow-lg)] min-w-0 overflow-x-auto no-scrollbar">
             {NAV_ITEMS.map((item) => (
               <NavButton key={item.key} item={item} isActive={isActivePath(item.path)} />
             ))}
@@ -196,7 +197,7 @@ const BottomNav = ({
                 aria-label="Feedback"
                 className="rounded-[12px] flex items-center justify-center text-[var(--nav-fg-muted)] hover:text-[var(--nav-fg)] min-h-[44px] min-w-[44px]"
               >
-                <Icon name="feedback" className="text-[18px]" />
+                <Icon name="rate_review" className="text-[length:var(--fs-18)]" />
               </button>
             )}
           </div>
@@ -230,7 +231,7 @@ const BottomNav = ({
                         : 'bg-[var(--bg-card)] border-[var(--border-light)] text-[var(--accent)] hover:bg-[var(--bg-hover)]'
                     } ${item.active ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-card)]' : ''}`}
                   >
-                    <span className="material-symbols-outlined text-[20px] transition-transform duration-200 group-hover:scale-110">
+                    <span className="material-symbols-outlined text-[length:var(--fs-20)] transition-transform duration-200 group-hover:scale-110">
                       {item.icon}
                     </span>
                   </button>
@@ -249,7 +250,7 @@ const BottomNav = ({
                   'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), scale 0.22s ease-out, background-color 0.2s ease-out',
               }}
             >
-              <span className="material-symbols-outlined text-[20px] font-bold select-none pointer-events-none">
+              <span className="material-symbols-outlined text-[length:var(--fs-20)] font-bold select-none pointer-events-none">
                 add
               </span>
               {menuOpen && (
@@ -291,8 +292,8 @@ const BottomNav = ({
           >
             <div className="flex justify-between items-center mb-5">
               <div>
-                <h3 className="text-[15px] font-bold text-[var(--text-primary)]">Log Activity</h3>
-                <p className="text-[10px] tracking-widest uppercase text-[var(--text-muted)]">
+                <h3 className="text-[length:var(--fs-15)] font-bold text-[var(--text-primary)]">Log Activity</h3>
+                <p className="text-[length:var(--fs-10)] tracking-widest uppercase text-[var(--text-muted)]">
                   Manual entry
                 </p>
               </div>
@@ -301,14 +302,14 @@ const BottomNav = ({
                 aria-label="Close log form"
                 className="w-11 h-11 rounded-full bg-[var(--bg-hover)] flex items-center justify-center text-[var(--text-muted)] shrink-0"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span className="material-symbols-outlined text-[length:var(--fs-18)]">close</span>
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               {formError && (
                 <p
                   role="alert"
-                  className="text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2"
+                  className="text-[length:var(--fs-11)] font-bold text-[var(--error)] bg-[var(--error-bg)] border border-[var(--error)]/20 rounded-lg p-2"
                 >
                   {formError}
                 </p>
@@ -316,7 +317,7 @@ const BottomNav = ({
               <div>
                 <label
                   htmlFor="bn-calories"
-                  className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]"
+                  className="text-[length:var(--fs-10)] font-bold uppercase tracking-widest text-[var(--text-muted)]"
                 >
                   Calories
                 </label>
@@ -330,14 +331,14 @@ const BottomNav = ({
                   placeholder="e.g. 500"
                   value={formData.calories}
                   onChange={(e) => setFormData({ ...formData, calories: e.target.value })}
-                  className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                  className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[length:var(--fs-14)] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label
                     htmlFor="bn-steps"
-                    className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]"
+                    className="text-[length:var(--fs-10)] font-bold uppercase tracking-widest text-[var(--text-muted)]"
                   >
                     Steps
                   </label>
@@ -350,13 +351,13 @@ const BottomNav = ({
                     placeholder="10000"
                     value={formData.steps}
                     onChange={(e) => setFormData({ ...formData, steps: e.target.value })}
-                    className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[14px] outline-none focus:border-[var(--accent)]"
+                    className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[length:var(--fs-14)] outline-none focus:border-[var(--accent)]"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="bn-minutes"
-                    className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]"
+                    className="text-[length:var(--fs-10)] font-bold uppercase tracking-widest text-[var(--text-muted)]"
                   >
                     Minutes
                   </label>
@@ -369,14 +370,14 @@ const BottomNav = ({
                     placeholder="45"
                     value={formData.minutes}
                     onChange={(e) => setFormData({ ...formData, minutes: e.target.value })}
-                    className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[14px] outline-none focus:border-[var(--accent)]"
+                    className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[length:var(--fs-14)] outline-none focus:border-[var(--accent)]"
                   />
                 </div>
               </div>
               <div>
                 <label
                   htmlFor="bn-water"
-                  className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]"
+                  className="text-[length:var(--fs-10)] font-bold uppercase tracking-widest text-[var(--text-muted)]"
                 >
                   Water (ml)
                 </label>
@@ -389,14 +390,14 @@ const BottomNav = ({
                   placeholder="2500"
                   value={formData.water}
                   onChange={(e) => setFormData({ ...formData, water: e.target.value })}
-                  className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[14px] outline-none focus:border-[var(--accent)]"
+                  className="mt-1 w-full h-11 rounded-[12px] bg-[var(--input-bg)] border border-[var(--input-border)] px-3 text-[length:var(--fs-14)] outline-none focus:border-[var(--accent)]"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full h-11 rounded-[12px] bg-[var(--accent)] text-[var(--text-inverse)] font-bold text-[13px] flex items-center justify-center gap-1.5"
+                className="w-full h-11 rounded-[12px] bg-[var(--accent)] text-[var(--text-inverse)] font-bold text-[length:var(--fs-13)] flex items-center justify-center gap-1.5"
               >
-                <span className="material-symbols-outlined text-[18px]">check</span> Save
+                <span className="material-symbols-outlined text-[length:var(--fs-18)]">check</span> Save
               </button>
             </form>
           </div>

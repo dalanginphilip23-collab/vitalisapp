@@ -1,0 +1,376 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Vitalis desktop sidebar — expanded navigation / compact icon rail.
+   Scoped to .v-sidebar and driven entirely by existing theme tokens.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.v-sidebar {
+  position: fixed;
+  inset-block: 0;
+  left: 0;
+  z-index: var(--z-nav);
+  display: none;
+  width: var(--sidebar-w-expanded);
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border-light);
+  background: var(--nav-bg);
+  color: var(--text-primary);
+  transition:
+    width var(--duration-sidebar) var(--ease-default),
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+@media (min-width: 768px) {
+  .v-sidebar { display: flex; }
+}
+
+.v-sidebar.is-collapsed {
+  width: var(--sidebar-w-collapsed);
+}
+
+/* ── Brand + collapse control ─────────────────────────────────────── */
+.v-sidebar__head {
+  display: flex;
+  height: 72px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 16px;
+}
+
+.v-sidebar__brand {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.v-sidebar__brand:focus-visible,
+.v-sidebar__toggle:focus-visible,
+.v-sidebar__row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.v-sidebar__brand-mark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-light);
+  transition: width var(--duration-sidebar) var(--ease-default),
+    height var(--duration-sidebar) var(--ease-default);
+}
+
+.v-sidebar__brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v-sidebar__brand-copy {
+  max-width: 140px;
+  overflow: hidden;
+  opacity: 1;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  white-space: nowrap;
+  transition:
+    max-width var(--duration-sidebar) var(--ease-default),
+    opacity var(--duration-fast) ease;
+}
+
+.v-sidebar__toggle {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.v-sidebar__toggle:hover {
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Larger hit area without changing the compact visual size. */
+.v-sidebar__toggle::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 10px;
+}
+
+.v-sidebar__toggle .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__head {
+  gap: 4px;
+  padding-inline: 8px;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__brand {
+  flex: 0 0 auto;
+  gap: 0;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__brand-copy {
+  max-width: 0;
+  opacity: 0;
+}
+
+/* ── Navigation area ──────────────────────────────────────────────── */
+.v-sidebar__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 2px 12px 0;
+}
+
+.v-sidebar__group-head {
+  max-height: 22px;
+  overflow: hidden;
+  margin: 8px 0 6px;
+  padding: 0 10px;
+  opacity: 1;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    max-height var(--duration-sidebar) var(--ease-default),
+    margin var(--duration-sidebar) var(--ease-default),
+    opacity var(--duration-fast) ease;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__group-head {
+  max-height: 0;
+  margin-block: 0;
+  padding-inline: 0;
+  opacity: 0;
+}
+
+.v-sidebar__nav {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.v-sidebar__nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* ── Navigation rows ──────────────────────────────────────────────── */
+.v-sidebar__row {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    gap var(--duration-sidebar) var(--ease-default),
+    padding var(--duration-sidebar) var(--ease-default);
+}
+
+.v-sidebar__row:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.v-sidebar__row.is-active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.v-sidebar__row.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  transform: translateY(-50%);
+}
+
+.v-sidebar__row.is-danger:hover {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.v-sidebar__row-icon {
+  position: relative;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.v-sidebar__icon {
+  font-size: 20px;
+}
+
+.v-sidebar__label {
+  max-width: 160px;
+  overflow: hidden;
+  opacity: 1;
+  white-space: nowrap;
+  transition:
+    max-width var(--duration-sidebar) var(--ease-default),
+    opacity var(--duration-fast) ease;
+}
+
+.v-sidebar__alert {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--warning);
+  box-shadow: 0 0 0 2px var(--nav-bg);
+}
+
+.v-sidebar.is-collapsed .v-sidebar__row {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__label {
+  max-width: 0;
+  opacity: 0;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__row.is-active {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.v-sidebar.is-collapsed .v-sidebar__row.is-active::before {
+  display: none;
+}
+
+.v-sidebar.is-collapsed .v-sidebar__row.is-danger:hover {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+/* ── Account footer ───────────────────────────────────────────────── */
+.v-sidebar__foot {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-light);
+}
+
+.v-sidebar__foot .v-sidebar__group-head {
+  margin-top: 10px;
+}
+
+/* ── Rail tooltips (portal — never clipped by the scroll area) ────── */
+.v-sidebar-tooltip {
+  position: fixed;
+  z-index: 3000;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
+  border-radius: 8px;
+  background: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  color: var(--bg-primary);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: v-sidebar-tooltip-in 0.12s ease-out;
+}
+
+.v-sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  background: inherit;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+@keyframes v-sidebar-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translate(-3px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}

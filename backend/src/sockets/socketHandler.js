@@ -144,6 +144,42 @@ module.exports = (io) => {
       }
     });
 
+    // Live chat relay. The client persists the message over REST first, then
+    // emits `send-chat` with the saved row id. We re-read the row from the DB
+    // (never trust client-supplied content) and fan it out to the recipient's
+    // room as `receive-chat` — this is what makes messages appear instantly.
+    socket.on("send-chat", async (payload) => {
+      try {
+        const me = socket.data.userId;
+        if (!me) return;
+        const id = Number(payload?.id);
+        if (!Number.isInteger(id) || id <= 0) return;
+
+        const db = require("../config/db");
+        const [rows] = await db.execute(
+          `SELECT id, sender_id, receiver_id, content,
+                  DATE_FORMAT(sent_at, '%H:%i') as time
+           FROM messages WHERE id = ? LIMIT 1`,
+          [id],
+        );
+        const row = rows[0];
+        if (!row) return;
+        // A socket may only relay messages it actually sent.
+        if (String(row.sender_id) !== String(me)) return;
+
+        io.to(String(row.receiver_id)).emit("receive-chat", {
+          id: row.id,
+          sender_id: row.sender_id,
+          receiver_id: row.receiver_id,
+          content: row.content,
+          time: row.time,
+          isMe: 0,
+        });
+      } catch (e) {
+        console.warn("[socket] send-chat failed:", e.message);
+      }
+    });
+
     socket.on("disconnect", () => {
       clearInterval(reverifyTimer);
     });

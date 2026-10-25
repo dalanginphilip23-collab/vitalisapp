@@ -1,4 +1,5 @@
-const db = require('../config/db');
+// Activity logs — thin controller. Logic + DB live in services/logs.service.js.
+const service = require('../services/logs.service');
 
 async function postUserId(req,res,next){
   try{
@@ -19,26 +20,7 @@ async function postUserId(req,res,next){
         if (process.env.NODE_ENV !== 'production') console.log(`[LOGS] Received — userId:${userId} calories:${c} steps:${s} minutes:${m}`);
     
         try {
-            const [result] = await db.execute(
-                `INSERT INTO daily_stats (user_id, stat_date, calories_burned, steps, workout_duration_mins)
-                 VALUES (?, CURDATE(), ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE 
-                     calories_burned       = calories_burned       + VALUES(calories_burned),
-                     steps                 = steps                 + VALUES(steps),
-                     workout_duration_mins = workout_duration_mins + VALUES(workout_duration_mins)`,
-                [userId, c, s, m]
-            );
-            // Water lives in sleep_logs (no water col in daily_stats) — persist if provided
-            if (w > 0) {
-              try {
-                await db.execute(
-                  `INSERT INTO sleep_logs (user_id, water_intake_ml, recorded_at) VALUES (?, ?, NOW())`,
-                  [userId, w]
-                );
-              } catch (wErr) {
-                console.error('[LOGS] Water insert warning:', wErr.message);
-              }
-            }
+            const result = await service.logDailyStats(userId, { calories: c, steps: s, minutes: m, water: w });
             if (process.env.NODE_ENV !== 'production') console.log(`[LOGS] OK — affectedRows:${result.affectedRows}`);
             res.status(200).json({ message: "Activity logged successfully" });
         } catch (err) {
@@ -52,15 +34,7 @@ async function gethistoryUserId(req,res,next){
   try{
         const { userId } = req.params;
         try {
-            const [rows] = await db.execute(
-                `SELECT id, workout_type, status, rep_count, start_time, end_time,
-                        duration_seconds, created_at
-                 FROM workout_logs
-                 WHERE user_id = ?
-                 ORDER BY start_time DESC
-                 LIMIT 50`,
-                [userId]
-            );
+            const rows = await service.getWorkoutHistory(userId);
             res.json(rows);
         } catch (err) {
             console.error("History fetch error:", err.message);

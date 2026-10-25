@@ -32,7 +32,11 @@ function recommendation(score) {
   return 'Rest recommended';
 }
 
-// Returns { readiness: number|null, hasData, source: 'checkin'|'activity'|null, recommendation }
+/**
+ * Readiness score from checkin/activity signals.
+ * @param {{ checkin?: Record<string, any> | null, sleepCount?: number, steps?: number, calories?: number }} props
+ * @returns {{ readiness: number | null, hasData: boolean, source: 'checkin' | 'activity' | null, recommendation: string | null }}
+ */
 function calcReadiness({ checkin, sleepCount = 0, steps = 0, calories = 0 } = {}) {
   if (checkin) {
     const sorenessVal = checkin.soreness_level ?? checkin.soreness;
