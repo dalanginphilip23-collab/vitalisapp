@@ -80,7 +80,11 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff2}'],
           // Hero/auth JPGs (~830KB) stay lazy-loaded online, not precached — offline shell uses offline.html.
           globIgnores: ['hero-gym.jpg', 'auth-gym.jpg'],
-          navigateFallback: '/offline.html',
+          // SPA fallback for route reloads: any navigation that isn't a
+          // precached asset serves the app shell. If this points at
+          // offline.html instead, every deployed deep-route reload shows the
+          // offline page (service worker handles navigations).
+          navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
             {
