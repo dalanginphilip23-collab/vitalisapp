@@ -523,7 +523,7 @@ const Landing = () => {
                 <HeroPhoneSet />
                 <img
                   className="nn-hero-photo"
-                  src="/landing/hero-cutout.png"
+                  src="/auth-gym.jpg"
                   alt=""
                   aria-hidden="true"
                   fetchPriority="high"
