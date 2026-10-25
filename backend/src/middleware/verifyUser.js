@@ -29,8 +29,11 @@ const verifyUser = async (req, res, next) => {
     return res.status(401).json({ error: 'Invalid session' });
   }
 
-  // Enforces verification + token_version (logout/password change revokes cookies)
-  // + soft-deactivation gate (Module 1: a deactivated account loses all routes).
+  // Enforces token_version (logout/password change revokes cookies) + soft-
+  // deactivation gate (Module 1: a deactivated account loses all routes).
+  // Verification is soft (Option A): unverified sessions are valid — the app
+  // shows a reminder banner. is_verified rides on req.user for any endpoint
+  // that needs to treat it as advisory.
   try {
     const db = require('../config/db');
     const [rows] = await db.execute(
@@ -46,9 +49,6 @@ const verifyUser = async (req, res, next) => {
       clearSessionCookie(req, res);
       return res.status(403).json({ error: 'Account deactivated', code: 'ACCOUNT_DEACTIVATED' });
     }
-    if (!u.is_verified) {
-      return res.status(403).json({ error: 'Email verification required.', code: 'NEEDS_VERIFICATION' });
-    }
     if (Number(u.token_version || 0) !== Number(decoded.tv || 0)) {
       clearSessionCookie(req, res);
       return res.status(401).json({ error: 'Session revoked. Please sign in again.', code: 'SESSION_REVOKED' });
@@ -56,6 +56,7 @@ const verifyUser = async (req, res, next) => {
     req.user = {
       id: u.id,
       email: u.email,
+      is_verified: Boolean(u.is_verified),
       role: u.role || 'member',
       status: u.status,
       accepted_terms_at: u.accepted_terms_at,

@@ -3,6 +3,7 @@ import GlassAmbient from './GlassAmbient.jsx';
 import Sidebar from './Sidebar.jsx';
 import Topbar from './Topbar.jsx';
 import BottomNav from './BottomNav.jsx';
+import VerifyEmailBanner from './app/VerifyEmailBanner.jsx';
 import { AppTopbarLeft } from './app/AppNav.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useSidebarCollapsed } from '../hooks/useSidebarCollapsed.js';
@@ -55,6 +56,8 @@ export default function AppShell({
           topbarClassName="app-topbar"
           leftSlot={topbarLeft ?? <AppTopbarLeft mobileTitle={mobileTitle} />}
         />
+        {/* Soft verification (Option A): reminder only, never a route wall. */}
+        <VerifyEmailBanner />
         <main className={`app-main ${mainClassName}`.trim()}>
           {contentClassName ? (
             <div className={contentClassName}>{children}</div>

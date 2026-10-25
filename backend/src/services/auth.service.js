@@ -281,13 +281,27 @@ async function register({ name, email, password }) {
   const newUserId = insertResult.insertId;
 
   // Dev/test: auto-activate and skip the email loop entirely so dummy addresses
-  // work with no inbox/SMTP. Production keeps the verify-before-login gate.
+  // work with no inbox/SMTP. Production sends the verify link in the background
+  // — sessions are NOT gated on it (soft verification, banner reminder in-app).
+  let autoVerified = false;
   if (!VERIFICATION_REQUIRED) {
     await db.execute("UPDATE users SET is_verified = 1 WHERE id = ?", [newUserId]);
-    return { newUserId, link: null, emailed: false, autoVerified: true };
+    autoVerified = true;
   }
 
+  // Fresh row for the session the controller issues right away (register =
+  // sign in — no trip back to the login screen).
+  const [userRows] = await db.execute(
+    "SELECT id, name, email, fitness_goal, avatar_url, token_version, is_verified, onboarding_completed, role, status, accepted_terms_at, accepted_terms_version FROM users WHERE id = ?",
+    [newUserId],
+  );
+  const user = userRows[0];
+
   // Email verification (link-based). Never block registration on SMTP.
+  if (autoVerified) {
+    return { newUserId, link: null, emailed: false, autoVerified: true, user };
+  }
+
   const { link } = await createVerificationToken(newUserId);
   let emailed = false;
   try {
@@ -297,7 +311,7 @@ async function register({ name, email, password }) {
     console.error("Verification email failed (SMTP?):", mailErr.message);
   }
 
-  return { newUserId, link, emailed };
+  return { newUserId, link, emailed, autoVerified: false, user };
 }
 
 // ─── LOGIN ───
@@ -343,20 +357,10 @@ async function login({ email, password }) {
     );
   }
 
-  if (!user.is_verified) {
-    if (VERIFICATION_REQUIRED) {
-      throw new AppError(
-        "Please verify your email before signing in. Check your inbox for the verification link.",
-        403,
-        "NEEDS_VERIFICATION",
-        { email: user.email },
-      );
-    }
-    // Dev/test: auto-verify legacy unverified accounts on first login so the
-    // session also passes verifyUser + socket auth (both read is_verified).
-    await db.execute("UPDATE users SET is_verified = 1 WHERE id = ?", [user.id]);
-    user.is_verified = 1;
-  }
+  // Soft verification (Option A): unverified accounts sign in like anyone
+  // else — the app shows a "verify your email" reminder instead of a wall.
+  // The verify-link email does the actual confirmation whenever the user
+  // clicks it; nothing here blocks on it.
 
   await db.execute("UPDATE users SET is_online = 1 WHERE id = ?", [user.id]);
 

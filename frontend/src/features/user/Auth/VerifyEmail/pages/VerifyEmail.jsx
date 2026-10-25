@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiGet } from '../../../../../lib/apiClient.js';
 import BrandLoader from '../../../../../components/ui/BrandLoader.jsx';
+import { useAuth } from '../../../../../hooks/useAuth.jsx';
 
 // Handles /verify-email?token=... links + shows the EMAIL VERIFIED success screen.
 const VerifyEmail = () => {
   const navigate = useNavigate();
+  const { user, setUser } = useAuth();
   const [params] = useSearchParams();
   const token = params.get('token');
   const [state, setState] = useState(token ? 'verifying' : 'no-token');
@@ -16,12 +18,19 @@ const VerifyEmail = () => {
     (async () => {
       try {
         await apiGet(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
+        // Soft verification flow: if this browser still has the session from
+        // registration, flip it verified immediately so the reminder banner
+        // disappears the moment they come back.
+        if (user) setUser({ ...user, isVerified: true });
         setState('done');
       } catch (err) {
         setError(err.message);
         setState('failed');
       }
     })();
+    // Fire once per link: the token is fixed and `user`/setUser are only read
+    // at completion time — re-running on identity changes could re-verify.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (
@@ -47,7 +56,7 @@ const VerifyEmail = () => {
               </div>
               <h1 className="font-['Bebas_Neue'] text-[32px] tracking-wider leading-none mb-2">EMAIL VERIFIED</h1>
               <p className="text-xs text-[#c4c9b0]/60 mb-8">Your Vitalis account is now active.</p>
-              <button onClick={() => navigate('/login')}
+              <button onClick={() => navigate(user ? '/dashboard' : '/login')}
                 className="w-full bg-[var(--accent)] text-[var(--text-inverse)] font-bold text-[11px] tracking-[0.25em] uppercase p-4 rounded-xl hover:bg-[var(--accent-light)] transition-all">
                 Continue
               </button>

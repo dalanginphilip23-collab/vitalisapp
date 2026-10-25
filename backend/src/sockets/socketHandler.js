@@ -65,7 +65,7 @@ module.exports = (io) => {
       try {
         const db = require("../config/db");
         const [rows] = await db.execute(
-          "SELECT token_version, is_verified FROM users WHERE id = ? LIMIT 1",
+          "SELECT token_version FROM users WHERE id = ? LIMIT 1",
           [authedUserId]
         );
         const row = rows[0];
@@ -74,11 +74,8 @@ module.exports = (io) => {
           try { socket.disconnect(true); } catch { /* noop */ }
           return;
         }
-        if (Number(row.is_verified) !== 1) {
-          socket.emit("unauthorized", { error: "Email not verified" });
-          try { socket.disconnect(true); } catch { /* noop */ }
-          return;
-        }
+        // Note: verification is soft (Option A) — unverified sessions keep
+        // their live room; the in-app banner handles the reminder.
       } catch {
         // DB blip on connect — allow join, periodic reverify will enforce.
       }

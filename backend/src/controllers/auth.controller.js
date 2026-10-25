@@ -147,31 +147,42 @@ async function postregister(req, res, next) {
     }
 
     try {
-      const { link, emailed, autoVerified } = await service.register({
+      const { link, emailed, autoVerified, user } = await service.register({
         name,
         email,
         password,
       });
 
-      // Dev/test auto-activates the account (no inbox needed) — send the user
-      // straight to sign in instead of the check-your-email screen.
-      if (autoVerified) {
-        return res.status(201).json({
-          success: true,
-          message: "Account created. You can sign in now.",
-          needsVerification: false,
-          email,
-        });
-      }
+      // Soft verification (Option A) — register IS sign in: issue the session
+      // immediately and let the app route straight to onboarding/dashboard.
+      // The verify email still goes out and flips is_verified when clicked;
+      // until then the app shows an in-app reminder instead of a wall.
+      setSessionCookie(res, user.id, user.email, req, user.token_version);
+      await service.logUserSession(req, user.id);
 
-      /** @type {{ success: boolean, message: string, needsVerification: boolean, email: string, devVerificationLink?: string }} */
+      /** @type {{ success: boolean, message: string, id: number, name: string, email: string, avatar: string|null, goal: string, isVerified: boolean, onboardingCompleted: boolean, role: string, status: string, acceptedTermsAt: string|null, acceptedTermsVersion: number|null, needsVerification: boolean, devVerificationLink?: string }} */
       const payload = {
         success: true,
-        message: "Account created. Check your email to verify.",
-        needsVerification: true,
-        email,
+        message: autoVerified
+          ? "Account created. You can sign in now."
+          : "Account created. You're signed in — check your inbox to confirm your email.",
+        // Same shape /login and /me return so AuthContext stays consistent.
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar_url || null,
+        goal: user.fitness_goal,
+        isVerified: Boolean(user.is_verified),
+        onboardingCompleted: Boolean(user.onboarding_completed),
+        role: user.role,
+        status: user.status,
+        acceptedTermsAt: user.accepted_terms_at,
+        acceptedTermsVersion: user.accepted_terms_version,
+        needsVerification: !autoVerified,
       };
-      if (!emailed && DEV_VERIFY_FALLBACK) payload.devVerificationLink = link;
+      if (payload.needsVerification && !emailed && DEV_VERIFY_FALLBACK) {
+        payload.devVerificationLink = link;
+      }
       res.status(201).json(payload);
     } catch (err) {
       if (err.isOperational) return res.status(err.status).json({ error: err.message });

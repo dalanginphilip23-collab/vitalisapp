@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiPost } from '../../../../../lib/apiClient.js';
+import { useAuth } from '../../../../../hooks/useAuth.jsx';
 
 export const useRegister = () => {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
   const navigate = useNavigate();
+  const { setUser, refreshAuth } = useAuth();
 
   const clearError = () => setError('');
 
@@ -17,6 +19,41 @@ export const useRegister = () => {
       if (r && r.startsWith('/') && !r.startsWith('//')) return r;
     } catch { /* ignore */ }
     return null;
+  };
+
+  // Login 200 only means the backend issued a session — it lives or dies on
+  // whether the browser kept the cookie. Verify immediately like useLogin so a
+  // blocked cookie shows an actionable error instead of a fake registration.
+  const COOKIE_BLOCKED_MSG =
+    'Account created, but your browser refused the session cookie, so you were signed straight back out. ' +
+    'Allow cookies for this site (turn off Incognito / third-party-cookie blocking), then sign in below.';
+
+  // Same shape /login and /me return — copy of useLogin's normalizeUser for the
+  // fixed register payload (fail-closed on missing fields).
+  const normalizeUser = (data) => ({
+    id:                   data.id,
+    name:                 data.name,
+    email:                data.email,
+    avatar:               data.avatar ?? null,
+    goal:                 data.goal ?? null,
+    isVerified:           data.isVerified ?? false,
+    onboardingCompleted:  data.onboardingCompleted ?? false,
+    role:                 data.role ?? 'member',
+    status:               data.status ?? 'active',
+    acceptedTermsAt:      data.acceptedTermsAt ?? null,
+    acceptedTermsVersion: data.acceptedTermsVersion ?? null,
+  });
+
+  // Register = sign in (soft verification): land in the app directly.
+  const routeAfterRegister = (user) => {
+    const pending = getSafeRedirect();
+    if (pending && pending.startsWith('/') && !pending.startsWith('//')) {
+      navigate(pending);
+      return;
+    }
+    // Admins belong in the console — the user dashboard stays one click away.
+    if (user.role === 'admin') { navigate('/admin'); return; }
+    navigate(user.onboardingCompleted === false ? '/onboarding' : '/dashboard');
   };
 
   const handleRegister = async (e, formData) => {
@@ -54,18 +91,27 @@ export const useRegister = () => {
         // Module 1 — explicit consent flag; server records the audit trail.
         agreed: true,
       }, { skipAuthRedirect: true });
-      // Preserve ?redirect= across verify -> login -> dashboard (validated, no open redirect)
-      const redirect = getSafeRedirect();
-      if (redirect) {
-        try { sessionStorage.setItem('vitalis:postAuthRedirect', redirect); } catch { /* private mode */ }
+
+      // Soft verification (Option A): the backend issues the session during
+      // register, so the new user goes straight into the app — onboarding for
+      // new accounts, dashboard otherwise. No check-your-email wall.
+      if (data.id) {
+        const user = normalizeUser(data);
+        setUser(user);
+        if (!(await refreshAuth())) {
+          setError(COOKIE_BLOCKED_MSG);
+          return;
+        }
+        routeAfterRegister(user);
+        return;
       }
-      // Dev/test backend auto-activates accounts (no inbox needed) — skip the
-      // check-your-email screen and go straight to sign in.
+
+      // Fallback for an older backend without instant sessions (never
+      // expected, but keeps the flow fail-open to the known screens).
       if (data.needsVerification === false) {
         navigate('/login', { state: { email, justRegistered: true } });
         return;
       }
-      // New accounts must verify email before signing in
       navigate('/check-email', { state: { email, devLink: data.devVerificationLink } });
     } catch (err) {
       setError(err.message);
