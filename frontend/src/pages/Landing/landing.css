@@ -36,7 +36,7 @@
   --nn-radius-pill: 999px;
 
   /* Type scale — bold display, compact headings, readable body. */
-  --nn-h1: clamp(3.5rem, 4.5vw, 4rem);
+  --nn-h1: clamp(5rem, 6.7vw, 7rem);
   --nn-h2: clamp(2rem, 2.9vw, 2.5rem);
   --nn-h3: clamp(1.0625rem, 1.3vw, 1.25rem);
   --nn-body: clamp(0.875rem, 0.95vw, 1rem);
@@ -3703,7 +3703,7 @@
   }
 
   .nn-hero-title {
-    font-size: clamp(3.5rem, 5vw, 4rem);
+    font-size: clamp(4rem, 6.9vw, 5.25rem);
   }
 
   .nn-hero-photo {
@@ -3785,7 +3785,7 @@
   }
 
   .nn-hero-title {
-    font-size: clamp(3rem, 6vw, 3.5rem);
+    font-size: clamp(3.75rem, 7.2vw, 5rem);
   }
 
   .nn-hero-title .nn-line {
@@ -3903,7 +3903,7 @@
 @media (max-width: 760px) {
   .nn-root {
     --nn-gutter: 19px;
-    --nn-h1: clamp(2.25rem, 9vw, 2.75rem);
+    --nn-h1: clamp(2.75rem, 9.8vw, 3.25rem);
     --nn-h2: clamp(1.625rem, 4.2vw, 2rem);
     --nn-body: 0.875rem;
     --nn-small: 0.875rem;
@@ -3936,7 +3936,7 @@
   }
 
   .nn-hero-title {
-    font-size: clamp(2.25rem, 9vw, 2.75rem);
+    font-size: clamp(2.75rem, 9.8vw, 3.25rem);
     line-height: 1.05;
   }
 
@@ -4376,7 +4376,7 @@
 
 @media (max-width: 400px) {
   .nn-hero-title {
-    font-size: 2.25rem;
+    font-size: 2.75rem;
   }
 
   .nn-download-card {
