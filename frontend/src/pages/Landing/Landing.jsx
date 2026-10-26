@@ -6,12 +6,8 @@ import { getInstallEvent, clearInstallEvent, subscribeToInstall } from "../../li
 import { TermsOfUseModal, PrivacyPolicyModal } from "../../features/user/Auth/Register/components/LegalModals.jsx";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
 
-import "@fontsource/playfair-display/700.css";
-import "@fontsource/playfair-display/800.css";
-import "@fontsource/poppins/300.css";
-import "@fontsource/poppins/400.css";
-import "@fontsource/poppins/500.css";
-import "@fontsource/poppins/600.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
 import "./landing.css";
 
 import { FEATURES, SERVICES, PLANS, FOOTER_LINKS, FOOTER_INFO, SUPPORT_INFO, NAV_LINKS, formatCount } from "./landingData.js";

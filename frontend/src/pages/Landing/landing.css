@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════
    Vitalis landing page — visual system matched to the NEWME health-tracker
    reference: warm off-white canvas, near-black surfaces, vivid lime,
-   high-contrast editorial serif display + geometric Poppins body copy.
+   bold geometric Manrope display + clean Manrope body copy.
    Every value is scoped under .nn-root so the rest of the app is untouched.
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -27,8 +27,7 @@
   --nn-surface-strong-hover: #252b28;
   --nn-lime-ink: #18210f;
 
-  --nn-serif: "Playfair Display", "Times New Roman", Georgia, serif;
-  --nn-sans: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --nn-font: "Manrope", "Segoe UI", system-ui, sans-serif;
 
   --nn-frame: 1348px;
   --nn-gutter: 24px;
@@ -36,18 +35,19 @@
   --nn-radius-card: 28px;
   --nn-radius-pill: 999px;
 
-  --nn-h1: clamp(3.55rem, 8.9vw, 8rem);
-  --nn-h2: clamp(2.45rem, 4.25vw, 3.85rem);
-  --nn-h3: clamp(1.55rem, 2.25vw, 2.05rem);
-  --nn-body: clamp(0.95rem, 1.04vw, 1.075rem);
-  --nn-small: clamp(0.8rem, 0.9vw, 0.9rem);
-  --nn-nav: 0.98rem;
+  /* Type scale — bold display, compact headings, readable body. */
+  --nn-h1: clamp(3.5rem, 4.5vw, 4rem);
+  --nn-h2: clamp(2rem, 2.9vw, 2.5rem);
+  --nn-h3: clamp(1.0625rem, 1.3vw, 1.25rem);
+  --nn-body: clamp(0.875rem, 0.95vw, 1rem);
+  --nn-small: clamp(0.875rem, 0.95vw, 0.9375rem);
+  --nn-nav: 0.875rem;
 
   position: relative;
   min-height: 100dvh;
   background: var(--nn-bg);
   color: var(--nn-ink);
-  font-family: var(--nn-sans);
+  font-family: var(--nn-font);
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -100,10 +100,6 @@
   padding-inline: var(--nn-gutter);
 }
 
-.nn-serif {
-  font-family: var(--nn-serif);
-}
-
 .nn-muted {
   color: var(--nn-muted);
 }
@@ -114,10 +110,10 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-family: var(--nn-sans);
+  font-family: var(--nn-font);
   font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.055em;
+  font-weight: 800;
+  letter-spacing: -0.045em;
   line-height: 1;
   color: var(--nn-ink);
 }
@@ -177,8 +173,8 @@
   position: relative;
   padding: 9px 0;
   font-size: var(--nn-nav);
-  font-weight: 400;
-  letter-spacing: -0.012em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--nn-ink);
   white-space: nowrap;
 }
@@ -213,9 +209,9 @@
   border-radius: var(--nn-radius-pill);
   background: var(--nn-surface-strong);
   color: var(--nn-white);
-  font-size: 0.98rem;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
   white-space: nowrap;
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
@@ -243,20 +239,20 @@
 
 .nn-display {
   margin: 0;
-  font-family: var(--nn-serif);
+  font-family: var(--nn-font);
   font-weight: 800;
   letter-spacing: -0.045em;
-  line-height: 0.98;
+  line-height: 1.02;
   color: var(--nn-ink);
 }
 
 .nn-h2 {
   margin: 0;
-  font-family: var(--nn-serif);
+  font-family: var(--nn-font);
   font-size: var(--nn-h2);
   font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 1.02;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
   color: var(--nn-ink);
 }
 
@@ -264,9 +260,9 @@
   margin: 0;
   max-width: 510px;
   font-size: var(--nn-small);
-  font-weight: 300;
-  line-height: 1.72;
-  letter-spacing: 0.004em;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: var(--nn-muted);
 }
 
@@ -372,8 +368,8 @@
 
 .nn-hero-title {
   font-size: var(--nn-h1);
-  line-height: 0.965;
-  letter-spacing: -0.047em;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
   max-width: 760px;
 }
 
@@ -395,9 +391,10 @@
 .nn-hero-copy .nn-lede {
   margin-top: clamp(20px, 1.9vw, 28px);
   max-width: 540px;
-  font-size: clamp(1rem, 1.16vw, 1.2rem);
-  line-height: 1.56;
-  font-weight: 300;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: -0.005em;
 }
 
 .nn-hero-cta-row {
@@ -416,9 +413,9 @@
   border-radius: var(--nn-radius-pill);
   background: var(--nn-surface-strong);
   color: var(--nn-white);
-  font-size: 1.02rem;
-  font-weight: 300;
-  letter-spacing: -0.01em;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
   transition: background-color 0.2s ease;
 }
 
@@ -493,11 +490,11 @@
 
 .nn-download-top h3 {
   margin: 0;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.35rem, 1.75vw, 1.7rem);
+  font-family: var(--nn-font);
+  font-size: var(--nn-h3);
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.035em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: var(--nn-white);
 }
 
@@ -527,8 +524,8 @@
 .nn-download-card p.nn-download-note {
   margin: 8px 0 0;
   max-width: 270px;
-  font-size: 0.86rem;
-  font-weight: 300;
+  font-size: 0.875rem;
+  font-weight: 400;
   line-height: 1.55;
   color: #9b9d99;
 }
@@ -543,20 +540,20 @@
 
 .nn-download-stat strong {
   display: block;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.8rem, 2.4vw, 2.2rem);
-  font-weight: 700;
-  line-height: 0.9;
-  letter-spacing: -0.025em;
+  font-family: var(--nn-font);
+  font-size: clamp(1.25rem, 1.65vw, 1.75rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
   color: var(--nn-white);
 }
 
 .nn-download-stat span {
   display: block;
   margin-top: 7px;
-  font-size: 0.77rem;
-  font-weight: 300;
-  line-height: 1.25;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
   color: #969894;
 }
 
@@ -666,9 +663,9 @@
 }
 
 .nn-play-label {
-  font-size: 1.17rem;
-  font-weight: 300;
-  letter-spacing: -0.015em;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
@@ -685,10 +682,10 @@
   background: rgba(15, 20, 18, 0.55);
   box-shadow: 0 10px 30px rgba(15, 20, 18, 0.18);
   backdrop-filter: blur(12px);
-  font-size: clamp(1.22rem, 1.55vw, 1.45rem);
-  font-weight: 400;
-  line-height: 1.28;
-  letter-spacing: -0.027em;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
   color: var(--nn-lime);
 }
 
@@ -708,10 +705,10 @@
 
 .nn-available-card p {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: 0.9375rem;
   font-weight: 400;
-  line-height: 1.36;
-  letter-spacing: -0.018em;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
 }
 
 .nn-available-card a {
@@ -720,10 +717,11 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: auto;
-  font-family: var(--nn-serif);
-  font-size: 1.18rem;
+  font-family: var(--nn-font);
+  font-size: 1rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .nn-available-card .nn-available-arrow {
@@ -808,7 +806,7 @@
   border-radius: 20px;
   background: #f5f5f1;
   padding: 17px 7px 8px;
-  font-family: var(--nn-sans);
+  font-family: var(--nn-font);
 }
 
 .nn-phone-screen.is-dark {
@@ -979,7 +977,7 @@
 }
 
 .nn-readiness-ring strong {
-  font-family: var(--nn-serif);
+  font-family: var(--nn-font);
   font-size: 14px;
   line-height: 0.9;
 }
@@ -1123,11 +1121,11 @@
 
 .nn-stat strong {
   display: block;
-  font-family: var(--nn-serif);
-  font-size: clamp(2.7rem, 4.05vw, 3.65rem);
-  font-weight: 700;
-  line-height: 0.92;
-  letter-spacing: -0.035em;
+  font-family: var(--nn-font);
+  font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
   color: #fbfcf8;
   white-space: nowrap;
 }
@@ -1136,9 +1134,9 @@
   display: block;
   max-width: 190px;
   margin-top: 16px;
-  font-size: clamp(0.8rem, 0.98vw, 0.98rem);
-  font-weight: 300;
-  line-height: 1.48;
+  font-size: clamp(0.75rem, 0.9vw, 0.875rem);
+  font-weight: 500;
+  line-height: 1.45;
   color: #9d9f9a;
 }
 
@@ -1203,11 +1201,11 @@
 
 .nn-feature-card h3 {
   margin: 0 0 18px;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.9rem, 2.5vw, 2.35rem);
+  font-family: var(--nn-font);
+  font-size: var(--nn-h3);
   font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -0.04em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: #fcfcf9;
 }
 
@@ -1218,9 +1216,10 @@
 .nn-feature-card p {
   margin: 0;
   max-width: 350px;
-  font-size: 0.97rem;
-  font-weight: 300;
-  line-height: 1.7;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: #969893;
 }
 
@@ -1241,10 +1240,10 @@
   border-radius: 999px;
   background: var(--nn-lime);
   color: var(--nn-lime-ink);
-  font-family: var(--nn-serif);
-  font-size: 1.1rem;
+  font-family: var(--nn-font);
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.005em;
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -1317,11 +1316,11 @@
 
 .nn-service-title-row h3 {
   margin: 0;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.65rem, 2.2vw, 2rem);
+  font-family: var(--nn-font);
+  font-size: var(--nn-h3);
   font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .nn-service-arrow {
@@ -1350,9 +1349,10 @@
 .nn-service-card p {
   margin: 12px 0 0;
   max-width: 405px;
-  font-size: 0.94rem;
-  font-weight: 300;
-  line-height: 1.65;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: var(--nn-muted);
 }
 
@@ -1393,27 +1393,28 @@
   justify-content: center;
   align-self: flex-start;
   color: var(--nn-lime-ink);
-  font-size: 1.34rem;
-  font-weight: 400;
+  font-size: 1.25rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .nn-plan-top h3 {
   margin: clamp(42px, 4.3vw, 64px) 0 0;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.6rem, 2.2vw, 2.05rem);
+  font-family: var(--nn-font);
+  font-size: var(--nn-h3);
   font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.025em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
 }
 
 .nn-plan-top p {
   margin: 15px auto 0;
   max-width: 310px;
-  font-size: 0.91rem;
-  font-weight: 300;
-  line-height: 1.58;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: #8b8b89;
 }
 
@@ -1430,19 +1431,19 @@
 
 .nn-plan-price-label {
   display: block;
-  font-size: 0.82rem;
-  font-weight: 300;
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: #979994;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .nn-plan-price {
   display: block;
   margin-top: 4px;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.4rem, 1.8vw, 1.7rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-family: var(--nn-font);
+  font-size: clamp(1.375rem, 1.7vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--nn-white);
 }
@@ -1494,11 +1495,11 @@
 .nn-download-panel h2 {
   max-width: 660px;
   margin: 0;
-  font-family: var(--nn-serif);
-  font-size: clamp(2.8rem, 5.2vw, 4.7rem);
+  font-family: var(--nn-font);
+  font-size: var(--nn-h2);
   font-weight: 800;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
   color: var(--nn-white);
 }
 
@@ -1553,18 +1554,18 @@
 }
 
 .nn-store-copy small {
-  font-size: 0.57rem;
-  font-weight: 400;
-  letter-spacing: 0.08em;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.78;
 }
 
 .nn-store-copy strong {
   margin-top: 4px;
-  font-size: 1.15rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
 .nn-phone-stage {
@@ -1625,7 +1626,7 @@
   background: #f7f7f3;
   overflow: hidden;
   color: var(--nn-ink);
-  font-family: var(--nn-sans);
+  font-family: var(--nn-font);
   padding: 32px 15px 14px;
 }
 
@@ -1945,7 +1946,7 @@
   --u-border: rgba(43, 56, 38, 0.9);
   background: var(--u-bg);
   color: var(--u-text);
-  font-family: "Inter", var(--nn-sans);
+  font-family: var(--nn-font);
   padding: 16px 6px 7px;
 }
 
@@ -1955,7 +1956,7 @@
   top: 4px;
   left: 8px;
   right: 8px;
-  font-family: "Inter", sans-serif;
+  font-family: var(--nn-font);
 }
 
 .u-screen .material-symbols-outlined {
@@ -2094,7 +2095,7 @@
 .u-hero-value small {
   display: block;
   margin-top: 1.5px;
-  font-family: "Inter", sans-serif;
+  font-family: var(--nn-font);
   font-size: 3.7px;
   font-weight: 500;
   letter-spacing: 0;
@@ -2448,7 +2449,7 @@
 
 .u-lg {
   padding: 28px 13px 12px;
-  font-family: "Inter", var(--nn-sans);
+  font-family: var(--nn-font);
 }
 
 .u-lg .nn-phone-status {
@@ -2457,7 +2458,7 @@
   right: 23px;
   font-size: 8px;
   color: #e9ede3;
-  font-family: "Inter", sans-serif;
+  font-family: var(--nn-font);
 }
 
 .u-lg-top {
@@ -2703,7 +2704,7 @@
 }
 
 .u-lg-section-head small {
-  font-family: "Inter", sans-serif;
+  font-family: var(--nn-font);
   font-size: 5px;
   font-weight: 500;
   color: var(--u-muted);
@@ -2946,17 +2947,18 @@
 .nn-footer-brand p {
   max-width: 280px;
   margin: 20px 0 0;
-  font-size: 0.95rem;
-  font-weight: 300;
-  line-height: 1.7;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: #8b8b89;
 }
 
 .nn-footer-col h3 {
   margin: 2px 0 19px;
-  font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: -0.018em;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--nn-ink);
 }
 
@@ -2970,9 +2972,9 @@
 .nn-footer-links a,
 .nn-footer-links button {
   padding: 0;
-  font-size: 0.89rem;
-  font-weight: 300;
-  line-height: 1.45;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
   color: #8f8f8d;
   text-align: left;
   transition: color 0.18s ease;
@@ -3038,8 +3040,9 @@
   flex-wrap: wrap;
   gap: 14px 26px;
   padding: 22px 0;
-  font-size: 0.82rem;
-  font-weight: 300;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
   color: #96968f;
 }
 
@@ -3142,10 +3145,10 @@
 .nn-mobile-links a {
   padding: 16px 0;
   border-bottom: 1px solid var(--nn-line);
-  font-family: var(--nn-serif);
-  font-size: 1.65rem;
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-family: var(--nn-font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .nn-mobile-links a:last-child {
@@ -3167,7 +3170,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 700;
 }
 
 .nn-mobile-signin {
@@ -3212,9 +3216,9 @@
 
 .nn-modal-eyebrow {
   margin: 0;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.17em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--nn-muted);
 }
@@ -3235,11 +3239,11 @@
 
 .nn-modal h2 {
   margin: 22px 0 0;
-  font-family: var(--nn-serif);
-  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  font-family: var(--nn-font);
+  font-size: clamp(2rem, 2.8vw, 2.5rem);
   font-weight: 800;
-  line-height: 0.99;
-  letter-spacing: -0.045em;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
 }
 
 /* Contextual footer sheets: concise, tactile and visually part of the landing
@@ -3282,17 +3286,18 @@
 .nn-info-heading h2 {
   margin: 0;
   max-width: 460px;
-  font-size: clamp(2rem, 3.7vw, 3.05rem);
-  line-height: 1.01;
+  font-size: clamp(1.75rem, 2.3vw, 2rem);
+  line-height: 1.1;
 }
 
 .nn-info-description {
   margin: 18px 0 0;
   max-width: 92%;
   color: var(--nn-muted);
-  font-size: 0.96rem;
+  font-size: 0.875rem;
   font-weight: 400;
-  line-height: 1.62;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
 }
 
 .nn-info-points {
@@ -3312,9 +3317,9 @@
   gap: 10px;
   margin: 0;
   color: var(--nn-ink);
-  font-size: 0.84rem;
+  font-size: 0.8125rem;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .nn-info-points li > span {
@@ -3376,9 +3381,9 @@
 }
 
 .nn-info-email-copy small {
-  font-size: 0.64rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #9aa294;
 }
@@ -3386,9 +3391,9 @@
 .nn-info-email-copy strong {
   overflow: hidden;
   color: var(--nn-white);
-  font-size: 0.9rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
   text-overflow: ellipsis;
 }
 
@@ -3424,9 +3429,9 @@
   border-radius: 999px;
   background: var(--nn-lime);
   color: #182110;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
   transition: transform 160ms ease, background 160ms ease;
 }
 
@@ -3456,8 +3461,8 @@
   border: 1px solid color-mix(in srgb, var(--nn-ink) 20%, transparent);
   color: var(--nn-ink);
   background: transparent;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   transition: background 160ms ease, border-color 160ms ease;
 }
 
@@ -3488,12 +3493,12 @@
   }
 
   .nn-info-heading h2 {
-    font-size: clamp(1.85rem, 7.6vw, 2.4rem);
+    font-size: clamp(1.625rem, 6vw, 2rem);
   }
 
   .nn-info-description {
     max-width: 100%;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
 
   .nn-info-points {
@@ -3554,26 +3559,28 @@
 .nn-tour-visual small {
   position: relative;
   z-index: 1;
-  font-size: 0.76rem;
-  letter-spacing: 0.12em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #999f96;
 }
 
 .nn-tour-copy h3 {
   margin: 5px 0 0;
-  font-family: var(--nn-serif);
-  font-size: clamp(1.7rem, 2.5vw, 2.25rem);
+  font-family: var(--nn-font);
+  font-size: var(--nn-h3);
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .nn-tour-copy p {
   margin: 14px 0 0;
-  font-size: 0.95rem;
-  font-weight: 300;
-  line-height: 1.7;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: var(--nn-muted);
 }
 
@@ -3621,8 +3628,8 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 400;
+  font-size: 0.8125rem;
+  font-weight: 600;
   transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
@@ -3639,7 +3646,9 @@
   border-radius: 999px;
   background: var(--nn-surface-strong);
   color: var(--nn-white);
-  font-size: 0.88rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
 .nn-tour-cta span:last-child {
@@ -3694,7 +3703,7 @@
   }
 
   .nn-hero-title {
-    font-size: clamp(3.55rem, 8.6vw, 7rem);
+    font-size: clamp(3.5rem, 5vw, 4rem);
   }
 
   .nn-hero-photo {
@@ -3714,7 +3723,7 @@
 
   .nn-hero-panel-copy {
     width: 230px;
-    font-size: 1.35rem;
+    font-size: 0.9375rem;
   }
 
   .nn-available-card {
@@ -3755,7 +3764,7 @@
   .nn-contact {
     height: 50px;
     padding-inline: 26px;
-    font-size: 0.9rem;
+    font-size: 0.8125rem;
   }
 
   .nn-header-inner {
@@ -3776,7 +3785,7 @@
   }
 
   .nn-hero-title {
-    font-size: clamp(4rem, 10.8vw, 7.4rem);
+    font-size: clamp(3rem, 6vw, 3.5rem);
   }
 
   .nn-hero-title .nn-line {
@@ -3817,7 +3826,7 @@
     right: 34px;
     bottom: 34px;
     width: 240px;
-    font-size: 1.3rem;
+    font-size: 0.9375rem;
   }
 
   .nn-download-card {
@@ -3833,7 +3842,7 @@
   }
 
   .nn-stat strong {
-    font-size: clamp(2.7rem, 6vw, 3.4rem);
+    font-size: clamp(1.9rem, 3vw, 2.25rem);
   }
 
   .nn-section-head {
@@ -3894,10 +3903,10 @@
 @media (max-width: 760px) {
   .nn-root {
     --nn-gutter: 19px;
-    --nn-h1: clamp(3.2rem, 14.1vw, 5rem);
-    --nn-h2: clamp(2.25rem, 8.3vw, 3.15rem);
-    --nn-body: 0.96rem;
-    --nn-small: 0.9rem;
+    --nn-h1: clamp(2.25rem, 9vw, 2.75rem);
+    --nn-h2: clamp(1.625rem, 4.2vw, 2rem);
+    --nn-body: 0.875rem;
+    --nn-small: 0.875rem;
   }
 
   .nn-header-inner {
@@ -3927,14 +3936,14 @@
   }
 
   .nn-hero-title {
-    font-size: clamp(3.1rem, 13.8vw, 5.2rem);
-    line-height: 0.98;
+    font-size: clamp(2.25rem, 9vw, 2.75rem);
+    line-height: 1.05;
   }
 
   .nn-hero-copy .nn-lede {
     margin-top: 19px;
-    font-size: 0.99rem;
-    line-height: 1.62;
+    font-size: 0.9375rem;
+    line-height: 1.6;
   }
 
   .nn-hero-cta-row {
@@ -3944,7 +3953,7 @@
   .nn-pill-cta {
     height: 52px;
     padding-left: 24px;
-    font-size: 0.93rem;
+    font-size: 0.875rem;
   }
 
   .nn-pill-cta .nn-arrow-bubble {
@@ -3972,7 +3981,7 @@
   }
 
   .nn-download-top h3 {
-    font-size: 1.3rem;
+    font-size: 1.125rem;
   }
 
   .nn-mini-arrow {
@@ -3981,8 +3990,8 @@
   }
 
   .nn-download-card p.nn-download-note {
-    font-size: 0.78rem;
-    line-height: 1.5;
+    font-size: 0.875rem;
+    line-height: 1.55;
   }
 
   .nn-download-stats {
@@ -3992,7 +4001,7 @@
   }
 
   .nn-download-stat strong {
-    font-size: 1.85rem;
+    font-size: clamp(1.25rem, 6vw, 1.75rem);
   }
 
   .nn-avatars {
@@ -4041,12 +4050,12 @@
   }
 
   .nn-available-card p {
-    font-size: 0.81rem;
-    line-height: 1.35;
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
 
   .nn-available-card a {
-    font-size: 0.92rem;
+    font-size: 1rem;
   }
 
   .nn-available-card .nn-available-arrow {
@@ -4076,15 +4085,15 @@
   }
 
   .nn-play-label {
-    font-size: 0.91rem;
+    font-size: 0.875rem;
   }
 
   .nn-hero-panel-copy {
     right: 18px;
     bottom: 24px;
     width: 230px;
-    font-size: 1.12rem;
-    line-height: 1.25;
+    font-size: 0.9375rem;
+    line-height: 1.5;
   }
 
   .nn-stats {
@@ -4097,13 +4106,13 @@
   }
 
   .nn-stat strong {
-    font-size: clamp(2.25rem, 10.4vw, 3rem);
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
   }
 
   .nn-stat span {
     margin-top: 10px;
-    font-size: 0.78rem;
-    line-height: 1.4;
+    font-size: 0.8125rem;
+    line-height: 1.45;
   }
 
   .nn-section {
@@ -4157,19 +4166,19 @@
   }
 
   .nn-feature-card h3 {
-    font-size: 1.9rem;
+    font-size: 1.125rem;
     margin-bottom: 13px;
   }
 
   .nn-feature-card p {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     line-height: 1.6;
   }
 
   .nn-discover {
     min-height: 44px;
     padding-inline: 22px;
-    font-size: 0.98rem;
+    font-size: 0.875rem;
     right: 18px;
     bottom: -21px;
   }
@@ -4194,12 +4203,12 @@
   }
 
   .nn-service-title-row h3 {
-    font-size: 1.7rem;
+    font-size: 1.125rem;
   }
 
   .nn-service-card p {
     margin-top: 9px;
-    font-size: 0.91rem;
+    font-size: 0.875rem;
   }
 
   .nn-pricing-grid {
@@ -4217,18 +4226,18 @@
   .nn-plan-num {
     width: 51px;
     height: 51px;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 
   .nn-plan-top h3 {
     margin-top: 34px;
-    font-size: 1.65rem;
+    font-size: 1.125rem;
   }
 
   .nn-plan-top p {
     max-width: 290px;
     margin-top: 12px;
-    font-size: 0.87rem;
+    font-size: 0.875rem;
   }
 
   .nn-plan-footer {
@@ -4248,7 +4257,7 @@
   }
 
   .nn-download-panel h2 {
-    font-size: clamp(2.6rem, 11vw, 3.6rem);
+    font-size: var(--nn-h2);
   }
 
   .nn-store-row {
@@ -4367,7 +4376,7 @@
 
 @media (max-width: 400px) {
   .nn-hero-title {
-    font-size: 3.18rem;
+    font-size: 2.25rem;
   }
 
   .nn-download-card {
@@ -4392,7 +4401,7 @@
 
   .nn-hero-panel-copy {
     width: 200px;
-    font-size: 1rem;
+    font-size: 0.9375rem;
   }
 
   .nn-available-card {
@@ -4474,7 +4483,8 @@
   border-radius: 999px;
   background: var(--nn-soft);
   box-shadow: 0 1px 2px rgba(15, 20, 18, 0.06);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--nn-ink);
 }
 

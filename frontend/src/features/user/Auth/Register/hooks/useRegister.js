@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { apiPost } from '../../../../../lib/apiClient.js';
+import { GOOGLE_CLIENT_ID } from '../../../../../app/config/env.js';
 import { useAuth } from '../../../../../hooks/useAuth.jsx';
 
 export const useRegister = () => {
@@ -120,5 +122,49 @@ export const useRegister = () => {
     }
   };
 
-  return { loading, error, clearError, handleRegister };
+  // Google sign-up reuses POST /api/auth/google-login: the backend auto-creates
+  // the account for first-time Google users (verified, consent recorded) and
+  // issues the session — so a "Sign up with Google" needs no separate endpoint.
+  const handleGoogleSuccess = async (codeResponse) => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await apiPost('/api/auth/google-login', { code: codeResponse.code }, { skipAuthRedirect: true });
+      const user = normalizeUser(data);
+      if (!user.id) throw new Error('Google response did not include a user ID.');
+      setUser(user);
+      if (!(await refreshAuth())) {
+        setError(COOKIE_BLOCKED_MSG);
+        return;
+      }
+      routeAfterRegister(user);
+    } catch (err) {
+      setError(err.message || 'Google sign-up failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const googleSignup = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => setError('Google sign-up was interrupted.'),
+    flow: 'auth-code',
+  });
+
+  const signupWithGoogle = () => {
+    if (!GOOGLE_CLIENT_ID) {
+      setError(
+        'Google sign-up is not configured on this device. Add VITE_GOOGLE_CLIENT_ID to frontend/.env (same value as backend GOOGLE_CLIENT_ID), then restart the dev server.'
+      );
+      return;
+    }
+    try {
+      return googleSignup();
+    } catch {
+      // Popup blocked / COOP / SDK init failure — actionable message.
+      setError('Google popup was blocked or failed to start. Allow popups for this site and try again.');
+    }
+  };
+
+  return { loading, error, clearError, handleRegister, signupWithGoogle, googleEnabled: !!GOOGLE_CLIENT_ID };
 };
