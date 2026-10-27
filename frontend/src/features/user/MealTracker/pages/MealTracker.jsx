@@ -803,6 +803,7 @@ export default function MealTracker() {
             <QuickLogCard
               preview={preview}
               isAnalyzing={isAnalyzing}
+              hasResult={Boolean(result?.items?.length)}
               manualOpen={showManual}
               onCamera={() => setShowScanner(true)}
               onUpload={() => fileRef.current?.click()}

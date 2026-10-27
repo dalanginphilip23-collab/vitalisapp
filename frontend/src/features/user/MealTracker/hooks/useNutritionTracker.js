@@ -22,18 +22,59 @@ async function compressImageToBase64(dataUrl) {
   });
 }
 
+// dataURL → Blob so the backend receives a real multipart file (multer+sharp
+// store a compressed JPEG and return a short /uploads URL instead of an 8MB
+// dataURL fighting a 2000-char DB column).
+function dataUrlToBlob(dataUrl) {
+  const [meta = "data:image/jpeg", b64 = ""] = String(dataUrl).split(",");
+  const mime = (meta.match(/data:([^;]+)/) || [null, "image/jpeg"])[1];
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+// AI scans can legitimately run ~2min (model failover + retries) — the old 60s
+// abort fired while the backend was still working and looked like "AI broken".
+const ANALYZE_TIMEOUT_MS = 150000;
+
 async function apiAnalyzeFoodImage(dataUrl) {
+  // Server compresses again anyway (≤1600px); client downscale just trims the
+  // upload on slow connections.
   const base64 = await compressImageToBase64(dataUrl);
+  const form = new FormData();
+  form.append("image", dataUrlToBlob(`data:image/jpeg;base64,${base64}`), "meal.jpg");
   return apiFetch(`/api/food-logs/analyze-pic`, {
-    method: 'POST',
-    body: JSON.stringify({ base64Image: base64 }),
-    timeoutMs: 60000,
+    method: "POST",
+    body: form,
+    timeoutMs: ANALYZE_TIMEOUT_MS,
   });
 }
 
-async function apiSaveFoodLog(userId, meal) {
+async function apiSaveFoodLog(userId, meal, imageBlob) {
+  // With a photo (scan flow, first item): multipart. Without: plain JSON.
+  if (imageBlob) {
+    const form = new FormData();
+    form.append("image", imageBlob, "meal.jpg");
+    for (const [k, v] of Object.entries({
+      food_name: meal.food_name,
+      serving: meal.serving || "",
+      meal_type: meal.meal_type || "",
+      calories: meal.calories ?? 0,
+      protein: meal.protein ?? 0,
+      carbs: meal.carbs ?? 0,
+      fat: meal.fat ?? 0,
+      saturated_fat: meal.saturated_fat ?? 0,
+      trans_fat: meal.trans_fat ?? 0,
+      polyunsaturated_fat: meal.polyunsaturated_fat ?? 0,
+      monounsaturated_fat: meal.monounsaturated_fat ?? 0,
+    })) {
+      form.append(k, String(v ?? ""));
+    }
+    return apiFetch(`/api/food-logs/${userId}`, { method: "POST", body: form });
+  }
   return apiFetch(`/api/food-logs/${userId}`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify({
       food_name: meal.food_name,
       serving:   meal.serving   || null,
@@ -109,6 +150,7 @@ function toScanResult(data) {
       suggestion: typeof data.suggestion === 'string' ? data.suggestion : '',
       // Lets the UI show "busy, retry" instead of a silent 0-kcal food.
       retryable: Boolean(data.retryable),
+      imageUrl: typeof data.image_url === 'string' ? data.image_url : null,
     };
   }
   // Legacy single-object shape → one-item list.
@@ -163,6 +205,15 @@ export function useNutritionTracker(USER_ID) {
       const data = await apiAnalyzeFoodImage(dataUrl);
       const scan = toScanResult(data);
       if (!scan || scan.items.length === 0) throw new Error('Could not detect food in this photo.');
+      // All-failures fallback: the backend answers 200 with one "Unknown food"
+      // @ 0kcal. Rendering that silently looks like a broken AI — surface it.
+      const emptyFallback =
+        scan.items.length === 1 &&
+        scan.items[0].food_name === 'Unknown food' &&
+        Number(scan.items[0].calories) === 0;
+      if (emptyFallback) {
+        throw new Error(scan.suggestion || "Couldn't identify any food in this photo. Try a clearer, brighter shot.");
+      }
       setResult(scan);
     } catch (err) {
       showToast("❌ " + err.message);
@@ -270,6 +321,9 @@ export function useNutritionTracker(USER_ID) {
   // Each checked item saves as its own food-log. mealType (Module 4) is the
   // slot chosen on the scan result sheet — stored per log, not jammed into
   // `serving` like the legacy flow did.
+  // The scan photo rides along as a multipart file on the first item; the
+  // backend compresses it with sharp and stores a /uploads URL — this used to
+  // send a raw 8MB dataURL that failed the 2000-char `image_url` check.
   const handleLogSelected = async (previewUrl, mealType) => {
     const selected = (result?.items || []).filter(it => it.selected);
     if (selected.length === 0) {
@@ -279,11 +333,17 @@ export function useNutritionTracker(USER_ID) {
     setIsLogging(true);
     let saved = 0;
     let lastErr = null;
+    let photoBlob = null;
     try {
+      try { photoBlob = previewUrl ? dataUrlToBlob(previewUrl) : null; } catch { photoBlob = null; }
       for (let i = 0; i < selected.length; i++) {
         const it = selected[i];
+        // Prefer the short /uploads URL the scan response already stored; the
+        // multipart file is for scans whose analyze response lacked one.
+        const imageUrl = i === 0 ? (result?.imageUrl || null) : null;
+        const payload = { ...it, meal_type: mealType || null, image_url: imageUrl };
         try {
-          await apiSaveFoodLog(USER_ID, { ...it, meal_type: mealType || null, image_url: i === 0 ? previewUrl || null : null });
+          await apiSaveFoodLog(USER_ID, payload, i === 0 && !imageUrl ? photoBlob : null);
           saved += 1;
         } catch (e) {
           lastErr = e; // keep going so one failure doesn't lose the rest

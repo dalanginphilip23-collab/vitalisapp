@@ -8,6 +8,7 @@ const { corsOptions, isAllowed } = require("./config/cors");
 const errorHandler = require("./middleware/errorHandler");
 const requestLogger = require("./middleware/requestLogger");
 const mountRoutes = require("./routes");
+const { UPLOAD_ROOT } = require("./utils/upload");
 
 let appVersion = "1.0.0";
 try {
@@ -65,6 +66,20 @@ function createApp(io) {
   // Progress photos: image_data is a data URL; the 2mb global cap truncated
   // uploads that the progress service itself accepts (~4MB) with a cryptic 413.
   app.use("/api/progress/photos", json10mb);
+
+  // Stored uploads (multer + sharp): /uploads/<category>/<file>.jpg is
+  // referenced from food_logs.image_url. CORP must be cross-origin because a
+  // separately-hosted frontend embeds these URLs in <img> tags.
+  app.use(
+    "/uploads",
+    express.static(UPLOAD_ROOT, {
+      fallthrough: true,
+      maxAge: "30d",
+      setHeaders: (res) => {
+        try { res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"); } catch { /* noop */ }
+      },
+    }),
+  );
   app.use((req, res, next) => {
     const p = req.path || "";
     if (

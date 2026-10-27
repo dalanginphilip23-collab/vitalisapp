@@ -31,4 +31,13 @@ export const SOCKET_URL = rawSocket ? normalizeUrl(rawSocket) || API_BASE_URL : 
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+// Backend-stored assets (e.g. /uploads/food/x.jpg from the multer pipeline) are
+// relative to the API origin. In dev the Vite proxy serves them same-origin;
+// in prod they must ride on the absolute VITE_API_URL base.
+export function resolveAssetUrl(path) {
+  const p = String(path || '');
+  if (!p || /^(data|blob|https?):/i.test(p)) return p;
+  return p.startsWith('/') ? `${API_BASE_URL}${p}` : p;
+}
+
 export default API_BASE_URL;

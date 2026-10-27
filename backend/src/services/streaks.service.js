@@ -4,6 +4,7 @@
 // week-calendar day-bucketing and the grace rule every existing client
 // walkback uses ("a streak ending yesterday still shows").
 const db = require("../config/db");
+const { clientDateFromQuery } = require("../utils/clientDate");
 
 // Ten years of history keeps a genuinely long streak from being capped, while
 // the UI only renders the most recent 90 days. One window, no extra query.
@@ -38,14 +39,16 @@ async function dayKeys(userId, sql, params) {
 // Computed on every dashboard request: one DB-clock read plus three indexed
 // DISTINCT day queries is cheaper than a cache that can briefly disagree with
 // a just-committed log.
-async function getStreakSummary(userId) {
-  // DB-local "today" (CURDATE) — the same day boundary daily_stats and
-  // readiness use (see stats.service.js), so the streak and the dashboard
-  // cards can never disagree about which day it is.
+async function getStreakSummary(userId, clientToday) {
+  // "Today" follows the browser's local date when it says so (?today=…),
+  // falling back to DB-local CURDATE (the same day boundary daily_stats and
+  // readiness use) so old clients keep working. Without the client date the
+  // server's timezone can disagree with the user's by a day around local
+  // midnight — which lit the wrong tile in the streak week strip.
   const [[todayRow]] = await db.execute(
     `SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today`,
   );
-  const today = todayRow.today;
+  const today = clientDateFromQuery({ today: clientToday }) || todayRow.today;
 
   const [workoutSet, mealSet, checkinSet] = await Promise.all([
     dayKeys(

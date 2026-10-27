@@ -21,7 +21,11 @@
   "engines": {
     "node": ">=20"
   },
-  "keywords": ["fitness", "express", "mysql"],
+  "keywords": [
+    "fitness",
+    "express",
+    "mysql"
+  ],
   "author": "Vitalis",
   "license": "MIT",
   "dependencies": {
@@ -36,8 +40,10 @@
     "groq-sdk": "^1.1.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.5.0",
     "mysql2": "^3.20.0",
     "nodemailer": "^8.0.7",
+    "sharp": "^0.35.5",
     "socket.io": "^4.8.3",
     "ua-parser-js": "^2.0.9",
     "zod": "^3.23.8"

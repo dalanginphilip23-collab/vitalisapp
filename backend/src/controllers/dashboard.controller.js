@@ -5,7 +5,7 @@ async function getdashboardUserId(req,res,next){
   try{
     const { userId } = req.params;
     try {
-      const payload = await dashboardService.getDashboard(userId);
+      const payload = await dashboardService.getDashboard(userId, req.query?.today);
       res.json(payload);
     } catch (e) {
       console.error('DASHBOARD ERROR:', e.message);
@@ -31,9 +31,11 @@ async function getsearch(req,res,next){
 }
 
 // Week calendar card + read-only day detail (current week, Mon–Sun).
+// ?today=YYYY-MM-DD (the browser's local date) anchors "today" to the user's
+// calendar instead of the server's timezone; validated in the service.
 async function getWeekCalendar(req, res, next) {
   try {
-    res.json(await dashboardService.getWeekCalendar(req.user.id));
+    res.json(await dashboardService.getWeekCalendar(req.user.id, req.query?.today));
   } catch (e) {
     next(e);
   }

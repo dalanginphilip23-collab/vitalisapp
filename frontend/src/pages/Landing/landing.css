@@ -1480,19 +1480,24 @@
 
 .nn-download-panel {
   position: relative;
-  min-height: 470px;
   border-radius: 50px;
   background: var(--nn-surface-strong);
   color: var(--nn-white);
-  padding: clamp(44px, 5vw, 72px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  overflow: visible;
+  padding: clamp(36px, 4.4vw, 64px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(24px, 3.6vw, 52px);
+  overflow: hidden;
 }
 
-.nn-download-panel h2 {
+.nn-download-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.nn-download-copy h2 {
   max-width: 660px;
   margin: 0;
   font-family: var(--nn-font);
@@ -1568,13 +1573,24 @@
   letter-spacing: -0.005em;
 }
 
+.nn-download-art {
+  --nn-stage-scale: 0.88;
+  position: relative;
+  z-index: 1;
+  width: calc(480px * var(--nn-stage-scale));
+  height: calc(540px * var(--nn-stage-scale));
+  justify-self: end;
+  flex: 0 0 auto;
+}
+
 .nn-phone-stage {
   position: absolute;
-  right: clamp(34px, 5vw, 90px);
-  bottom: -28px;
+  top: 0;
+  left: 0;
   width: 480px;
   height: 540px;
-  z-index: 3;
+  transform: scale(var(--nn-stage-scale));
+  transform-origin: top left;
   filter: drop-shadow(0 26px 24px rgba(0, 0, 0, 0.22));
 }
 
@@ -3519,6 +3535,334 @@
   }
 }
 
+.nn-install-modal {
+  width: min(620px, 100%);
+  max-height: min(90dvh, 780px);
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: 28px;
+}
+
+.nn-install-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.nn-install-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--nn-lime);
+  color: var(--nn-lime-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.nn-install-icon .material-symbols-outlined {
+  font-size: 26px;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+
+.nn-install-heading h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 2.4vw, 2.1rem);
+  line-height: 1.08;
+}
+
+.nn-install-heading p {
+  margin: 7px 0 0;
+  color: var(--nn-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.nn-install-tabs {
+  display: flex;
+  gap: 5px;
+  margin-top: 20px;
+  padding: 5px;
+  border-radius: 15px;
+  background: var(--nn-soft);
+}
+
+.nn-install-tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 11px;
+  color: var(--nn-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.nn-install-tab .material-symbols-outlined {
+  font-size: 18px;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+
+.nn-install-tab.is-active {
+  background: var(--nn-surface-strong);
+  color: var(--nn-white);
+}
+
+.nn-install-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(15, 20, 18, 0.09);
+  border-radius: 14px;
+  background: rgba(205, 251, 71, 0.16);
+  color: var(--nn-ink);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.nn-install-alert .material-symbols-outlined {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-size: 18px;
+  color: #5f7d16;
+}
+
+.nn-install-steps {
+  display: grid;
+  gap: 9px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nn-install-steps li {
+  display: grid;
+  grid-template-columns: 28px 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid rgba(15, 20, 18, 0.08);
+  border-radius: 16px;
+  background: rgba(15, 20, 18, 0.035);
+}
+
+.nn-install-step-num {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--nn-lime);
+  color: var(--nn-lime-ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.nn-install-step-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--nn-surface-strong);
+  color: var(--nn-lime);
+}
+
+.nn-install-step-icon .material-symbols-outlined {
+  font-size: 20px;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+
+.nn-install-step-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nn-install-step-copy strong {
+  color: var(--nn-ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.nn-install-step-copy small {
+  color: var(--nn-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.nn-install-download {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(15, 20, 18, 0.08);
+  border-radius: 18px;
+  background: rgba(205, 251, 71, 0.14);
+}
+
+.nn-install-download-btn {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px 6px 20px;
+  border-radius: 999px;
+  background: var(--nn-lime);
+  color: var(--nn-lime-ink);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  transition: background-color 0.18s ease, opacity 0.18s ease;
+}
+
+.nn-install-download-btn:hover:not(:disabled) {
+  background: var(--nn-lime-hover);
+}
+
+.nn-install-download-btn:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.nn-install-download-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nn-install-download-label .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.nn-install-download-arrow {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--nn-surface-strong);
+  color: var(--nn-lime);
+}
+
+.nn-install-download-arrow .material-symbols-outlined {
+  font-size: 20px;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+
+.nn-install-download-note {
+  margin: 10px 2px 0;
+  color: var(--nn-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.nn-install-download-status {
+  margin: 8px 2px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 20, 18, 0.06);
+  color: var(--nn-ink);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.nn-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 560px) {
+  .nn-install-modal {
+    border-radius: 26px 26px 0 0;
+    padding: 22px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .nn-install-heading {
+    gap: 12px;
+  }
+
+  .nn-install-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+  }
+
+  .nn-install-icon .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .nn-install-heading h2 {
+    font-size: clamp(1.625rem, 6vw, 2rem);
+  }
+
+  .nn-install-tab {
+    flex-direction: column;
+    gap: 3px;
+    min-height: 54px;
+    padding: 4px 6px;
+    font-size: 0.625rem;
+  }
+
+  .nn-install-steps li {
+    grid-template-columns: 26px 36px minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px 12px;
+  }
+
+  .nn-install-download {
+    padding: 12px;
+  }
+
+  .nn-install-download-btn {
+    min-height: 52px;
+    padding-left: 16px;
+    font-size: 0.875rem;
+  }
+
+  .nn-install-download-arrow {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nn-install-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nn-install-actions .nn-info-primary {
+    width: 100%;
+    flex: 0 0 auto;
+    justify-content: space-between;
+  }
+
+  .nn-install-actions .nn-info-secondary {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+}
+
 .nn-tour {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
@@ -3876,19 +4220,19 @@
   }
 
   .nn-download-panel {
-    min-height: 640px;
-    padding-bottom: 270px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: clamp(36px, 5vw, 52px);
   }
 
-  .nn-download-panel h2 {
+  .nn-download-copy h2 {
     max-width: 590px;
   }
 
-  .nn-phone-stage {
-    right: 40px;
-    bottom: -32px;
-    transform: scale(0.88);
-    transform-origin: bottom right;
+  .nn-download-art {
+    --nn-stage-scale: 0.8;
+    justify-self: center;
+    margin-top: clamp(28px, 4vw, 42px);
   }
 
   .nn-footer-main {
@@ -4047,6 +4391,7 @@
     padding: 21px 18px 17px;
     border-radius: 20px;
     top: 10px;
+    z-index: 7;
   }
 
   .nn-available-card p {
@@ -4251,12 +4596,11 @@
   }
 
   .nn-download-panel {
-    min-height: 635px;
-    padding: 36px 26px 230px;
+    padding: 34px 26px 30px;
     border-radius: 30px;
   }
 
-  .nn-download-panel h2 {
+  .nn-download-copy h2 {
     font-size: var(--nn-h2);
   }
 
@@ -4267,21 +4611,12 @@
 
   .nn-store-badge {
     min-width: 0;
-    width: 100%;
-    max-width: 235px;
     height: 56px;
   }
 
-  .nn-store-badge.is-outline {
-    max-width: 210px;
-  }
-
-  .nn-phone-stage {
-    right: 50%;
-    bottom: -20px;
-    transform: translateX(50%) scale(0.68);
-    transform-origin: bottom center;
-    width: 480px;
+  .nn-download-art {
+    --nn-stage-scale: 0.72;
+    margin-top: 26px;
   }
 
   .nn-footer-main {
@@ -4374,9 +4709,40 @@
   }
 }
 
+@media (max-width: 560px) {
+  .nn-store-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .nn-store-badge {
+    width: 100%;
+  }
+
+  .nn-download-art {
+    --nn-stage-scale: 0.64;
+  }
+}
+
+@media (max-width: 480px) {
+  .nn-download-art {
+    --nn-stage-scale: 0.58;
+  }
+}
+
 @media (max-width: 400px) {
   .nn-hero-title {
     font-size: 2.75rem;
+  }
+
+  .nn-download-panel {
+    padding: 28px 20px 24px;
+  }
+
+  .nn-download-art {
+    --nn-stage-scale: 0.5;
   }
 
   .nn-download-card {
@@ -4411,6 +4777,16 @@
 
   .nn-phone-set {
     transform: scale(0.66);
+  }
+}
+
+@media (max-width: 360px) {
+  .nn-download-art {
+    --nn-stage-scale: 0.46;
+  }
+
+  .nn-download-panel {
+    padding: 26px 18px 22px;
   }
 }
 
@@ -4682,6 +5058,40 @@ html.dark-theme .nn-root .nn-modal {
   background: #141a12;
   border: 0;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+html.dark-theme .nn-root .nn-install-tabs {
+  background: #202a1b;
+}
+
+html.dark-theme .nn-root .nn-install-tab.is-active {
+  background: var(--nn-lime);
+  color: var(--nn-lime-ink);
+}
+
+html.dark-theme .nn-root .nn-install-steps li {
+  border-color: transparent;
+  background: #1b2318;
+}
+
+html.dark-theme .nn-root .nn-install-alert {
+  border-color: rgba(199, 244, 100, 0.22);
+  background: rgba(199, 244, 100, 0.1);
+  color: var(--nn-ink);
+}
+
+html.dark-theme .nn-root .nn-install-alert .material-symbols-outlined {
+  color: var(--nn-lime);
+}
+
+html.dark-theme .nn-root .nn-install-download {
+  border-color: transparent;
+  background: rgba(199, 244, 100, 0.08);
+}
+
+html.dark-theme .nn-root .nn-install-download-status {
+  background: #202a1b;
+  color: var(--nn-ink);
 }
 
 html.dark-theme .nn-root .nn-mobile-theme,
