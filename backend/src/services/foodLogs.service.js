@@ -7,8 +7,16 @@ const {
   suggestPlanForMeal,
   safeParseAI,
   stripDataUriPrefix,
+  callGeminiWithFallback,
 } = require("../config/gemini");
 const { AppError } = require("../utils/errors");
+const { buildFoodDensityPrompt } = require("../constants/foodAnalysisPrompt");
+const {
+  per100FromServing,
+  normalizeGrams,
+  normalizeFoodName,
+  sanitizeDensity,
+} = require("../utils/nutrition");
 
 // Module 4 — persisted meal slot. The manual form used to stuff the meal type
 // into `serving` and the diary reverse-engineered it by string-matching; now
@@ -240,11 +248,100 @@ async function suggestPlan(userId, body) {
   };
 }
 
+// ─── AI DENSITY ESTIMATE (per 100 g) ───
+// Best-effort cache: a database that has not run 044 still gets estimates, it
+// just cannot reuse them. Never let a cache failure block the user's estimate.
+function isMissingTableError(err) {
+  return Boolean(err) && (err.code === "ER_NO_SUCH_TABLE" || err.errno === 1146);
+}
+
+async function readDensityCache(nameNormalized) {
+  try {
+    const [[row]] = await db.execute(
+      `SELECT display_name, calories, protein, carbs, fat, source
+         FROM food_nutrition_cache WHERE name_normalized = ? LIMIT 1`,
+      [nameNormalized],
+    );
+    if (!row) return null;
+    const per100 = sanitizeDensity(row);
+    if (!per100) return null;
+    return { name: row.display_name, per100, source: row.source || "ai" };
+  } catch (err) {
+    if (isMissingTableError(err)) return null;
+    throw err;
+  }
+}
+
+async function writeDensityCache(nameNormalized, displayName, per100) {
+  try {
+    await db.execute(
+      `INSERT INTO food_nutrition_cache
+         (name_normalized, display_name, calories, protein, carbs, fat, source)
+       VALUES (?, ?, ?, ?, ?, ?, 'ai')
+       ON DUPLICATE KEY UPDATE
+         display_name = VALUES(display_name),
+         calories = VALUES(calories),
+         protein = VALUES(protein),
+         carbs = VALUES(carbs),
+         fat = VALUES(fat),
+         hit_count = hit_count + 1`,
+      [nameNormalized, displayName, per100.calories, per100.protein, per100.carbs, per100.fat],
+    );
+  } catch (err) {
+    if (isMissingTableError(err)) return;
+    console.warn("[food-density] cache write failed:", err.code || err.message);
+  }
+}
+
+// Per-100 g nutrition for an arbitrary dish name. Catalog-first would not
+// help here (the service only sees names that missed the catalog); the cache
+// makes repeat dishes instant.
+async function estimateFoodDensity(foodName) {
+  const displayName = String(foodName || "").replace(/\s+/g, " ").trim().slice(0, 150);
+  if (displayName.length < 2) {
+    throw new AppError("Enter a food name first (at least 2 characters).", 400, "INVALID_FOOD_NAME");
+  }
+  const key = normalizeFoodName(displayName);
+  if (!key) {
+    throw new AppError("That food name cannot be estimated.", 400, "INVALID_FOOD_NAME");
+  }
+
+  const cached = await readDensityCache(key);
+  if (cached) return { ...cached, cached: true };
+
+  const raw = await callGeminiWithFallback(buildFoodDensityPrompt(displayName));
+  const { parsed } = safeParseAI(raw, null);
+  if (!parsed) {
+    // callGeminiWithFallback returns a plain "high demand" string, never throws.
+    const unavailable = /high demand|try again|unavailable/i.test(String(raw));
+    throw new AppError(
+      unavailable
+        ? "AI nutrition estimate is unavailable right now. Try again in a moment."
+        : "Could not estimate nutrition for that food. Enter the values manually.",
+      unavailable ? 503 : 422,
+      unavailable ? "AI_ESTIMATE_UNAVAILABLE" : "AI_ESTIMATE_UNUSABLE",
+    );
+  }
+
+  const per100 = sanitizeDensity(parsed);
+  if (!per100) {
+    throw new AppError(
+      "Could not estimate nutrition for that food. Enter the values manually.",
+      422,
+      "AI_ESTIMATE_UNUSABLE",
+    );
+  }
+
+  await writeDensityCache(key, displayName, per100);
+  return { name: displayName, per100, source: "ai", cached: false };
+}
+
 // ─── PERSISTENCE ───
 async function saveFoodLog(userId, body) {
   const {
     food_name,
     serving,
+    grams,
     meal_type,
     calories,
     protein,
@@ -259,6 +356,10 @@ async function saveFoodLog(userId, body) {
 
   const foodNameNorm = String(food_name).trim().slice(0, 150);
   const servingNorm = typeof serving === "string" ? serving.trim().slice(0, 100) || null : null;
+  const gramsNorm = normalizeGrams(grams);
+  // No explicit serving text but a weight was logged → show the portion in the
+  // diary ("250 g"). Keeps older clients/scan items exactly as before.
+  const servingText = servingNorm || (gramsNorm ? `${gramsNorm} g` : null);
   // Reject unknown slots (e.g. free-text) rather than storing garbage.
   const mealTypeNorm = MEAL_TYPES.includes(meal_type) ? meal_type : null;
 
@@ -269,15 +370,16 @@ async function saveFoodLog(userId, body) {
   const mFat = round1(monounsaturated_fat);
 
   let insertId;
-  // Try full schema first (with fat breakdown)
+  // Try full schema first (with grams + fat breakdown)
   try {
     const [result] = await db.execute(
-      `INSERT INTO food_logs (user_id, food_name, serving, meal_type, calories, protein, carbs, fat, saturated_fat, trans_fat, polyunsaturated_fat, monounsaturated_fat, image_url, logged_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO food_logs (user_id, food_name, serving, grams, meal_type, calories, protein, carbs, fat, saturated_fat, trans_fat, polyunsaturated_fat, monounsaturated_fat, image_url, logged_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         userId,
         foodNameNorm,
-        servingNorm,
+        servingText,
+        gramsNorm,
         mealTypeNorm,
         calories || 0,
         protein || 0,
@@ -293,12 +395,12 @@ async function saveFoodLog(userId, body) {
     insertId = result.insertId;
   } catch (colErr) {
     if (colErr.code !== "ER_BAD_FIELD_ERROR") throw colErr;
-    // Fallback: without fat breakdown columns
+    // Fallback: without grams + fat breakdown columns (pre-043 schema)
     try {
       const [result] = await db.execute(
         `INSERT INTO food_logs (user_id, food_name, serving, meal_type, calories, protein, carbs, fat, image_url, logged_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [userId, foodNameNorm, servingNorm, mealTypeNorm, calories || 0, protein || 0, carbs || 0, fat || 0, image_url || null],
+        [userId, foodNameNorm, servingText, mealTypeNorm, calories || 0, protein || 0, carbs || 0, fat || 0, image_url || null],
       );
       insertId = result.insertId;
     } catch (e2) {
@@ -358,7 +460,7 @@ async function listFoodLogs(userId, limit, offset) {
   // LIMIT/OFFSET on some MySQL versions.
   try {
     [rows] = await db.query(
-      `SELECT id, food_name, serving, meal_type, calories, protein, carbs, fat, saturated_fat, trans_fat, polyunsaturated_fat, monounsaturated_fat, image_url,
+      `SELECT id, food_name, serving, grams, meal_type, calories, protein, carbs, fat, saturated_fat, trans_fat, polyunsaturated_fat, monounsaturated_fat, image_url,
                 DATE_FORMAT(logged_at, '%Y-%m-%d %H:%i') AS logged_at
          FROM food_logs WHERE user_id = ? ORDER BY logged_at DESC LIMIT ? OFFSET ?`,
       [userId, limit, offset],
@@ -390,20 +492,48 @@ async function listFoodLogs(userId, limit, offset) {
 
 // Module 4 — food catalog autocomplete (GET /api/food-catalog?q=).
 // Seeded reference table; case-insensitive prefix-then-contains ranking.
+// Returns both the reference serving values and a derived per-100 g density so
+// the manual form can scale macros from a user-entered weight.
 async function searchFoodCatalog(q, limit = 20) {
   const term = String(q || "").trim().slice(0, 80);
   const cap = Math.min(Math.max(Number(limit) || 20, 1), 50);
   if (term.length < 2) return [];
   const like = `%${term}%`;
-  const [rows] = await db.query(
-    `SELECT name, serving_label, calories, protein, carbs, fat
-       FROM food_catalog
-      WHERE name LIKE ?
-      ORDER BY name LIKE CONCAT(?) DESC, name
-      LIMIT ${cap}`,
-    [like, `${term}%`],
-  );
-  return rows;
+  let rows;
+  try {
+    [rows] = await db.query(
+      `SELECT name, serving_label, serving_grams, calories, protein, carbs, fat
+         FROM food_catalog
+        WHERE name LIKE ?
+        ORDER BY name LIKE CONCAT(?) DESC, name
+        LIMIT ${cap}`,
+      [like, `${term}%`],
+    );
+  } catch (colErr) {
+    if (colErr.code !== "ER_BAD_FIELD_ERROR") throw colErr;
+    // Pre-043 catalog: still serve autocomplete, just without weight scaling.
+    [rows] = await db.query(
+      `SELECT name, serving_label, calories, protein, carbs, fat
+         FROM food_catalog
+        WHERE name LIKE ?
+        ORDER BY name LIKE CONCAT(?) DESC, name
+        LIMIT ${cap}`,
+      [like, `${term}%`],
+    );
+  }
+  return rows.map((row) => {
+    const grams = Number(row.serving_grams);
+    return {
+      name: row.name,
+      serving_label: row.serving_label,
+      serving_grams: Number.isFinite(grams) && grams > 0 ? grams : null,
+      calories: Math.round(Number(row.calories) || 0),
+      protein: Number(row.protein) || 0,
+      carbs: Number(row.carbs) || 0,
+      fat: Number(row.fat) || 0,
+      per100: per100FromServing(row),
+    };
+  });
 }
 
 async function deleteFoodLog(userId, mealId) {
@@ -425,6 +555,7 @@ module.exports = {
   listFoodLogs,
   deleteFoodLog,
   searchFoodCatalog,
+  estimateFoodDensity,
   MEAL_TYPES,
   // exposed for tests / introspection
   getCached,

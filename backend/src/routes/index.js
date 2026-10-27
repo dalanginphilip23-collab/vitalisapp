@@ -92,7 +92,7 @@ function mountRoutes(app) {
         'GET|POST|PUT|DELETE /api/plans/* (incl. POST /adjust-from-goal)',
         'GET|PUT /api/profile/*',
         'POST /api/analyze-pose | POST /api/ai/analysis | POST /api/ai/coach | GET /api/ai/history/:userId | GET /api/logs/latest/:userId | POST /api/ai/run-analysis | GET /api/ai/summary',
-        'GET|POST|PUT|DELETE /api/food-logs/* (incl. POST /analyze-pic 10mb; GET /food-catalog?q= autocomplete)',
+        'GET|POST|PUT|DELETE /api/food-logs/* (incl. POST /analyze-pic 10mb; GET /food-catalog?q= autocomplete; POST /estimate-density per-100 g AI density)',
         'GET|POST|PUT|DELETE /api/activity/*',
         'GET|POST /api/goals/* | GET|POST /api/checkins/* | GET|PUT /api/nutrient-goals/*',
         'GET|POST|DELETE /api/community/*',

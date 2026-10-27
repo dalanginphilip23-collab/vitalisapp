@@ -1683,6 +1683,94 @@
   min-width: 0;
   flex-direction: column;
 }
+.meal-tracker .mt-weight-block {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+.meal-tracker .mt-weight-field {
+  width: 100%;
+}
+.meal-tracker .mt-weight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.meal-tracker .mt-weight-chip {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--mt-line-strong);
+  border-radius: 999px;
+  background: var(--mt-soft);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.meal-tracker .mt-weight-chip:hover:not(:disabled):not(.is-active) {
+  border-color: var(--mt-line-strong);
+  color: var(--text-primary);
+}
+.meal-tracker .mt-weight-chip.is-active {
+  border-color: transparent;
+  background: var(--mt-strong-bg);
+  color: var(--mt-strong-fg);
+}
+.meal-tracker .mt-weight-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.meal-tracker .mt-density-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+.meal-tracker .mt-density-action {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.meal-tracker .mt-density-action:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.meal-tracker .mt-density-action:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.meal-tracker .mt-density-icon {
+  font-size: 14px;
+}
+.meal-tracker .mt-density-spinner {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+.meal-tracker .mt-density-error {
+  margin: 0;
+  color: var(--error);
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.meal-tracker .mt-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 .meal-tracker .mt-save-button {
   display: flex;
   min-height: 46px;

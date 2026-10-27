@@ -66,6 +66,7 @@ async function postUserId(req, res, next) {
     const { userId } = req.params;
     const {
       food_name,
+      grams,
       calories,
       protein,
       carbs,
@@ -109,6 +110,15 @@ async function postUserId(req, res, next) {
       ) {
         return res.status(400).json({ error: `${k} must be a number 0–100000` });
       }
+    }
+    // Portion weight (grams) — optional; 0/empty means "not weighed".
+    if (
+      grams !== undefined &&
+      grams !== null &&
+      grams !== "" &&
+      (!Number.isFinite(Number(grams)) || Number(grams) < 0 || Number(grams) > 10000)
+    ) {
+      return res.status(400).json({ error: "grams must be a number 0–10000" });
     }
 
     const { insertId } = await service.saveFoodLog(userId, req.body || {});
@@ -176,6 +186,22 @@ async function deleteUserIdMealId(req, res, next) {
   }
 }
 
+// POST /api/food-logs/estimate-density — per-100 g nutrition for a typed dish
+// name (manual form's weight-based entry when the dish is not in the catalog).
+// AI quota + cache live in the service/middleware, not here.
+async function postEstimateDensity(req, res, next) {
+  try {
+    const foodName = req.body?.food_name ?? req.body?.name;
+    if (!foodName || String(foodName).trim().length < 2) {
+      return res.status(400).json({ error: "food_name must be at least 2 characters" });
+    }
+    const payload = await service.estimateFoodDensity(foodName);
+    res.json(payload);
+  } catch (e) {
+    next(e);
+  }
+}
+
 // GET /api/food-catalog?q= — Module 4 catalog autocomplete for the manual
 // meal form. Thin: q + limit straight to the service.
 async function getFoodCatalog(req, res, next) {
@@ -191,6 +217,7 @@ module.exports = {
   postanalyzePic,
   postUserIdSuggestPlan,
   postUserId,
+  postEstimateDensity,
   getFoodCatalog,
   getUserId,
   deleteUserIdMealId,

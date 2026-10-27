@@ -37,6 +37,8 @@ async function apiSaveFoodLog(userId, meal) {
     body: JSON.stringify({
       food_name: meal.food_name,
       serving:   meal.serving   || null,
+      // Weight-based manual entry: the portion the user weighed.
+      grams:     meal.grams     ?? null,
       // Module 4 — persisted meal slot (Breakfast/Lunch/Dinner/Snack/Other).
       meal_type: meal.meal_type || null,
       calories:  meal.calories  || 0,
@@ -49,6 +51,16 @@ async function apiSaveFoodLog(userId, meal) {
       monounsaturated_fat: meal.monounsaturated_fat || 0,
       image_url: meal.image_url || null,
     }),
+  });
+}
+
+// Per-100 g density for a typed dish name (manual form). AI-backed and cached
+// server-side; slow first call, instant afterwards.
+async function apiEstimateFoodDensity(foodName) {
+  return apiFetch(`/api/food-logs/estimate-density`, {
+    method: 'POST',
+    body: JSON.stringify({ food_name: foodName }),
+    timeoutMs: 60000,
   });
 }
 
@@ -160,6 +172,14 @@ export function useNutritionTracker(USER_ID) {
   };
 
   const clearResult = useCallback(() => setResult(null), []);
+
+  // Manual form: AI per-100 g density for dishes missing from the catalog.
+  // Errors bubble to the form so it can render an inline retry next to the
+  // weight field instead of a toast that hides the field in use.
+  const estimateFoodDensity = useCallback(
+    (foodName) => apiEstimateFoodDensity(foodName),
+    [],
+  );
 
   const toggleItem = useCallback((key) => {
     setResult(prev => {
@@ -294,6 +314,8 @@ export function useNutritionTracker(USER_ID) {
     }
   };
 
+  // Returns true only when the log actually saved, so the manual form can keep
+  // the user's typed portion on screen after a failure instead of discarding it.
   const handleLog = async (meal) => {
     setIsLogging(true);
     try {
@@ -305,8 +327,10 @@ export function useNutritionTracker(USER_ID) {
       qc.invalidateQueries({ queryKey: qk.dashboard(USER_ID) });
       await loadHistory();
       setSummarySeed((s) => s + 1);
+      return true;
     } catch (err) {
       showToast("❌ " + err.message);
+      return false;
     } finally {
       setIsLogging(false);
     }
@@ -329,5 +353,6 @@ export function useNutritionTracker(USER_ID) {
     toast, summarySeed,
     lastLoggedMeal,
     handleAnalyze, handleLog, handleLogSelected, toggleItem, scaleSelected, editItem, addCustomItem, clearResult, handleDeleteMeal, setToast,
+    estimateFoodDensity,
   };
 }

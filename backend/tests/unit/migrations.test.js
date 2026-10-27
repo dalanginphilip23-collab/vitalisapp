@@ -22,10 +22,11 @@ const EXPECTED = [
   '036_account_governance.sql', '037_meal_type_food_catalog.sql',
   '038_progress_module.sql', '039_admin_audit.sql', '040_admin_seed.sql',
   '041_goal_recalibration.sql', '042_progress_cadence.sql',
+  '043_food_grams.sql', '044_food_density_cache.sql',
 ];
 
 describe('migrations per-table baseline', () => {
-  it('migrations/ holds exactly the 42 canonical files', () => {
+  it('migrations/ holds exactly the 44 canonical files', () => {
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
     assert.deepEqual(files, EXPECTED);
   });
@@ -152,5 +153,26 @@ describe('migrations per-table baseline', () => {
     assert.match(sql, /`target_user_id` int\(11\) DEFAULT NULL/);
     assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE CASCADE/);
     assert.match(sql, /REFERENCES `users` \(`id`\) ON DELETE SET NULL/);
+  });
+
+  it('food grams migration adds a catalog serving weight + logged portion', () => {
+    const sql = read('043_food_grams.sql');
+    assert.match(sql, /ALTER TABLE `food_catalog`/);
+    assert.match(sql, /ADD COLUMN `serving_grams` decimal\(7,1\) DEFAULT NULL AFTER `serving_label`/);
+    assert.match(sql, /ALTER TABLE `food_logs`/);
+    assert.match(sql, /ADD COLUMN `grams` decimal\(7,1\) DEFAULT NULL AFTER `serving`/);
+    // Every seeded catalog row must resolve to a weight: deterministic labels
+    // (100 g / 1 oz) plus the curated CASE map.
+    assert.match(sql, /`serving_label` = '100 g'/);
+    assert.match(sql, /`serving_label` = '1 oz'/);
+    assert.match(sql, /SET `serving_grams` = CASE `name`/);
+  });
+
+  it('AI food-density cache is uniquely keyed by normalized name', () => {
+    const sql = read('044_food_density_cache.sql');
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS `food_nutrition_cache`/);
+    assert.match(sql, /UNIQUE KEY `uniq_food_density_name` \(`name_normalized`\)/);
+    assert.match(sql, /`protein` decimal\(6,2\)/);
+    assert.match(sql, /`source` varchar\(20\)/);
   });
 });

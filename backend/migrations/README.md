@@ -1,14 +1,16 @@
 # Migrations — Vitalis (one table per file)
 
-39 canonical files: `001_users.sql` … `029_workout_logs.sql` + `030_seeds.sql` +
+44 canonical files: `001_users.sql` … `029_workout_logs.sql` + `030_seeds.sql` +
 `031_landing_visits.sql` + `032_personal_plans.sql` + `033_user_allergies.sql` +
 `034_workout_sets.sql` + `035_training_preferences.sql` +
 `036_account_governance.sql` + `037_meal_type_food_catalog.sql` +
-`039_admin_audit.sql`.
+`038_progress_module.sql` + `039_admin_audit.sql` + `040_admin_seed.sql` +
+`041_goal_recalibration.sql` + `042_progress_cadence.sql` +
+`043_food_grams.sql` + `044_food_density_cache.sql`.
 Each table file is self-contained (`SET FOREIGN_KEY_CHECKS=0/1` + single
 `CREATE TABLE IF NOT EXISTS`). Seeds use `INSERT IGNORE`.
 Runner `src/db/migrate.js` applies pending `*.sql` in lexicographic order,
-tracked in `_migrations`. Next migration: `040_<slug>.sql`
+tracked in `_migrations`. Next migration: `045_<slug>.sql`
 (`npm run db:create -- <slug>`).
 
 ## History
@@ -57,6 +59,15 @@ tracked in `_migrations`. Next migration: `040_<slug>.sql`
   verified + onboarding complete. Idempotent; never overwrites an existing
   password — only repairs role/status/verification. Change the password from
   Profile after first login. Required columns come from 036.
+- 2026-10-27: `043_food_grams.sql` — Module 4: `food_catalog.serving_grams`
+  (grams in one reference serving; curated for all 114 seeded foods) and
+  `food_logs.grams` (portion actually logged). Backs gram-based manual entry:
+  GET /api/food-catalog now returns per-100 g values, and the form scales them
+  to the user's weight.
+- 2026-10-27: `044_food_density_cache.sql` — Module 4: `food_nutrition_cache`,
+  an AI per-100 g estimate cache keyed by normalized food name. Repeat dishes
+  are instant and don't spend AI quota; values are validated/clamped in
+  `src/utils/nutrition.js` before insert.
 
 ## Rules
 

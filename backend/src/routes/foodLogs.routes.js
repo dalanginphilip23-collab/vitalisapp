@@ -10,6 +10,9 @@ router.post('/analyze-pic', verifyUser, aiLimiter(), aiQuota, controller.postana
 // Module 4 — catalog autocomplete. MUST stay ABOVE GET /:userId so the path
 // isn't swallowed as a userId param.
 router.get('/food-catalog', verifyUser, meLimiter(), controller.getFoodCatalog);
+// Per-100 g AI density for weight-based manual entry. MUST stay ABOVE
+// POST /:userId for the same reason.
+router.post('/estimate-density', verifyUser, aiLimiter(), aiQuota, controller.postEstimateDensity);
 router.post('/:userId/suggest-plan', verifyUser, requireOwner('userId'), aiLimiter(), aiQuota, controller.postUserIdSuggestPlan);
 router.post('/:userId', verifyUser, requireOwner('userId'), writeLimiter(), controller.postUserId);
 router.get('/:userId', verifyUser, requireOwner('userId'), controller.getUserId);

@@ -3,7 +3,8 @@ import { apiGet } from '../../../../lib/apiClient.js';
 
 // Module 4 — food catalog autocomplete for the manual meal form.
 // Debounced GET /api/food-catalog?q=; picking a suggestion pre-fills name +
-// macros for a typical serving (everything stays editable afterwards).
+// macros, and when the row has a gram reference it also supplies a per-100 g
+// density so the weight field can rescale the portion.
 // Keyboard: ↑/↓ navigate, Enter picks, Esc closes. Clicking outside closes.
 export default function CatalogNameField({
   label = 'Meal name',
@@ -124,19 +125,24 @@ export default function CatalogNameField({
                   <span className="mt-catalog-option-name">{it.name}</span>
                   <span className="mt-catalog-option-serving">
                     {it.serving_label || 'typical serving'}
+                    {it.serving_grams ? ` · ${Number(it.serving_grams)} g` : ''}
                   </span>
                 </span>
                 <span className="mt-catalog-option-values">
-                  <span className="mt-catalog-option-kcal">{it.calories} kcal</span>
+                  <span className="mt-catalog-option-kcal">
+                    {it.per100 ? `${it.per100.calories} kcal / 100 g` : `${it.calories} kcal`}
+                  </span>
                   <span className="mt-catalog-option-macros">
-                    P{Number(it.protein)} · C{Number(it.carbs)} · F{Number(it.fat)}
+                    {it.per100
+                      ? `P${Number(it.per100.protein)} · C${Number(it.per100.carbs)} · F${Number(it.per100.fat)}`
+                      : `P${Number(it.protein)} · C${Number(it.carbs)} · F${Number(it.fat)}`}
                   </span>
                 </span>
               </button>
             </li>
           ))}
           <li className="mt-catalog-note">
-            Reference values — edit macros before saving if your portion differs.
+            Per-100 g values — enter a weight to scale to your portion.
           </li>
         </ul>
       )}
