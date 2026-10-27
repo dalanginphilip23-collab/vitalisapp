@@ -40,6 +40,7 @@ function MealInput({
 export function QuickLogCard({
   preview = null,
   isAnalyzing = false,
+  hasResult = false,
   manualOpen = false,
   onCamera = undefined,
   onUpload = undefined,
@@ -71,12 +72,14 @@ export function QuickLogCard({
 
           <div className="mt-photo-preview-copy">
             <p className="mt-photo-preview-title">
-              {isAnalyzing ? 'Analyzing photo' : 'Photo ready'}
+              {isAnalyzing ? 'Analyzing photo' : hasResult ? 'Photo ready' : 'Scan didn\u2019t complete'}
             </p>
             <p className="mt-photo-preview-note">
               {isAnalyzing
                 ? 'Finding foods and estimating nutrition…'
-                : 'Review the detected items below.'}
+                : hasResult
+                  ? 'Review the detected items below.'
+                  : 'No items were detected. Try again — clearer, brighter photo or another angle.'}
             </p>
           </div>
 
