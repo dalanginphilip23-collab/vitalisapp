@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../../../../components/Icon.jsx';
 import { apiGet } from '../../../../lib/apiClient.js';
+import { localTodayIso } from '../lib/dashboardFormat.js';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -38,7 +39,7 @@ export default function WeekCalendarCard({
   const alive = useRef(true);
 
   const load = () => {
-    apiGet('/api/dashboard/week-calendar')
+    apiGet(`/api/dashboard/week-calendar?today=${localTodayIso()}`)
       .then((d) => {
         if (!alive.current) return;
         setWeek(d);

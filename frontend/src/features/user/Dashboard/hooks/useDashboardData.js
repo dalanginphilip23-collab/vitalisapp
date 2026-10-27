@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch, apiPost } from '../../../../lib/apiClient.js';
 import { acquireSocket, releaseSocket, joinUserRoom } from '../../../../lib/socket.js';
+import { localTodayIso } from '../lib/dashboardFormat.js';
 
 export const useDashboardData = (USER_ID) => {
   const [data, setData]             = useState({ stats: {}, profile: {}, checkin: null });
@@ -72,7 +73,7 @@ export const useDashboardData = (USER_ID) => {
       try {
         // Sleep/workout 404s fall back to empty; dashboard errors still surface.
         const [result, sleepData, bioData, workoutData] = await Promise.all([
-          trackFetch(`/api/dashboard/${USER_ID}`),
+          trackFetch(`/api/dashboard/${USER_ID}?today=${localTodayIso()}`),
           trackFetch(`/api/sleep/${USER_ID}/today`).catch(() => ({})),
           trackFetch(`/api/sleep/${USER_ID}?range=D&metric=duration`).catch(() => []),
           trackFetch(`/api/workout-logs`).catch(() => ({ logs: [] })),

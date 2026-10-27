@@ -25,6 +25,11 @@ export const fmtShortDate = (value) => {
 
 export const startOfLocalDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
+// The browser's local "today" as YYYY-MM-DD (en-CA emits exactly this format).
+// Sent as ?today= on dashboard reads so the backend anchors the week card and
+// streak strip to the USER's calendar, not the server's timezone.
+export const localTodayIso = () => new Date().toLocaleDateString('en-CA');
+
 export const isToday = (value) => {
   const d = new Date(value);
   return !Number.isNaN(d.getTime()) && startOfLocalDay(d).getTime() === startOfLocalDay(new Date()).getTime();

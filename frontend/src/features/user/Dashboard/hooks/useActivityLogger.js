@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from '../../../../lib/apiClient.js';
 import { useToastStore } from '../../../../stores/toastStore.js';
+import { localTodayIso } from '../lib/dashboardFormat.js';
 
 export const useActivityLogger = (
   USER_ID,
@@ -29,7 +30,7 @@ export const useActivityLogger = (
       if (!hasActivity && !(waterMl > 0)) return;
 
       const [updatedData, freshBiometrics] = await Promise.all([
-        apiGet(`/api/dashboard/${USER_ID}`),
+        apiGet(`/api/dashboard/${USER_ID}?today=${localTodayIso()}`),
         apiGet(`/api/sleep/${USER_ID}?range=D&metric=duration`).catch(() => []),
       ]);
 

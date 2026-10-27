@@ -2,9 +2,14 @@
 const db = require('../config/db');
 const { AppError } = require('../utils/errors');
 const { calcReadiness } = require('../utils/readiness');
+const { clientDateFromQuery } = require('../utils/clientDate');
 const { getStreakSummary } = require('./streaks.service');
 
-async function getDashboard(userId) {
+// clientToday: the browser's local date (YYYY-MM-DD) from ?today=. Falls back
+// to the server clock when absent/invalid, so the dashboard follows the
+// user's calendar rather than the server's timezone.
+async function getDashboard(userId, clientToday) {
+  const today = clientDateFromQuery({ today: clientToday });
   // Independent selects run concurrently — ~3x faster than sequential awaits.
   const [statsRes, userRes, sleepRes, waterRes, streakRes] = await Promise.all([
     db.execute(
@@ -34,7 +39,7 @@ async function getDashboard(userId) {
     // Engagement streak (workouts ∪ meals ∪ check-ins) rides the dashboard
     // payload — the Dashboard hook already fetches this endpoint, so the
     // streak section costs zero extra round-trips. Never fails the dashboard.
-    getStreakSummary(userId).catch(() => null),
+    getStreakSummary(userId, today).catch(() => null),
   ]);
   const [stats] = statsRes;
   const [user] = userRes;
@@ -100,12 +105,21 @@ function addDaysISO(iso, n) {
   return dt.toISOString().slice(0, 10);
 }
 
-async function getWeekCalendar(userId) {
+// Monday = 0 … Sunday = 6, matching the week card's Mon–Sun strip.
+function weekdayIndex(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+}
+
+async function getWeekCalendar(userId, clientToday) {
   const [[wk]] = await db.execute(
-    `SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), '%Y-%m-%d') AS monday,
-            DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today`,
+    `SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today`,
   );
-  const monday = wk.monday;
+  // Anchor "today" to the browser's local date when it says so (?today=…):
+  // the server's CURDATE() can lag/lead the user's day by one around local
+  // midnight, which used to highlight the wrong day in the week strip.
+  const today = clientDateFromQuery({ today: clientToday }) || wk.today;
+  const monday = addDaysISO(today, -weekdayIndex(today));
   const sunday = addDaysISO(monday, 7);
 
   const [workoutsRes, mealsRes, checkinsRes, statsRes] = await Promise.all([
@@ -157,8 +171,8 @@ async function getWeekCalendar(userId) {
     const st = statsMap.get(date);
     days.push({
       date,
-      isToday: date === wk.today,
-      isFuture: date > wk.today,
+      isToday: date === today,
+      isFuture: date > today,
       workouts: {
         sessions: Number(wo?.sessions || 0),
         minutes: Math.round(Number(wo?.seconds || 0) / 60),
@@ -175,7 +189,7 @@ async function getWeekCalendar(userId) {
   return {
     weekStart: monday,
     weekEnd: days[6].date,
-    today: wk.today,
+    today,
     days,
     totals: {
       sessions: days.reduce((s, d) => s + d.workouts.sessions, 0),
