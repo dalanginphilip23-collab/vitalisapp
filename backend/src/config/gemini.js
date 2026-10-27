@@ -72,9 +72,10 @@ function backoffSleep(attempt, err) {
 }
 
 const AI_TEXT_TIMEOUT_MS = 25000;
-// Env-tunable so deploys can trade latency for coverage. Default 30s keeps the
-// worst-case 4-model chain (~2min w/ backoff) inside the client's abort window.
-const AI_VISION_TIMEOUT_MS = Number.parseInt(process.env.AI_VISION_TIMEOUT_MS || "30000", 10) || 30000;
+// Env-tunable so deploys can trade latency for coverage. 40s keeps thinking
+// models comfortable while the chain-wide deadline (analyzeFoodImage) still
+// brings the whole scan home inside the client's abort window.
+const AI_VISION_TIMEOUT_MS = Number.parseInt(process.env.AI_VISION_TIMEOUT_MS || "40000", 10) || 40000;
 
 // SDKs expose no AbortSignal: race caps a hung provider so it fails over
 // instead of parking the request (and its 10MB body) forever.
@@ -736,17 +737,47 @@ function emptyItemsFallback(reason) {
 }
 
 // VISION PROVIDERS
+// Gemini 3.x are thinking models: hidden reasoning shares the OUTPUT token
+// budget, so maxOutputTokens:1500 clipped the JSON mid-stream (diagnosed live:
+// response started mid-sentence with no opening brace). Thinking is disabled,
+// the budget raised, and a thinkingConfig-incompatible model degrades cleanly.
+function visionGenerationConfig(modelName, allowThinkingConfig = true) {
+  const config = { temperature: 0, maxOutputTokens: 4096 };
+  if (allowThinkingConfig) config.thinkingConfig = { thinkingBudget: 0 };
+  return config;
+}
+
+// Models that 400-rejected thinkingConfig at least once (degrade without it).
+const thinkingRejected = new Set();
+
 async function analyzeWithGeminiVision(base64Data, mimeType, modelName) {
   devLog(`[VITALIS IMAGE] Trying ${modelName}...`);
-  const model = getGenAI().getGenerativeModel({
-    model: modelName,
-    generationConfig: { temperature: 0, maxOutputTokens: 1500 },
-  });
+  const genAI = getGenAI();
+  const call = async (allowThinkingConfig) => genAI
+    .getGenerativeModel({
+      model: modelName,
+      generationConfig: visionGenerationConfig(modelName, allowThinkingConfig),
+    })
+    .generateContent([
+      FOOD_ANALYSIS_PROMPT,
+      { inlineData: { data: base64Data, mimeType } },
+    ]);
 
-  const result = await withTimeout(model.generateContent([
-    FOOD_ANALYSIS_PROMPT,
-    { inlineData: { data: base64Data, mimeType } },
-  ]), AI_VISION_TIMEOUT_MS, modelName);
+  let result;
+  try {
+    result = await withTimeout(call(true), AI_VISION_TIMEOUT_MS, modelName);
+  } catch (err) {
+    // Older models reject thinkingConfig with INVALID_ARGUMENT — retry once
+    // without it instead of burning the whole provider.
+    const msg = String(err?.message || err);
+    if (!thinkingRejected.has(modelName) && (msg.includes("thinking") || msg.includes("INVALID_ARGUMENT") || msg.includes("unknown field") || msg.includes("Unexpected"))) {
+      devWarn(`[VITALIS IMAGE] ${modelName} rejected thinkingConfig — retrying without it`);
+      thinkingRejected.add(modelName);
+      result = await withTimeout(call(false), AI_VISION_TIMEOUT_MS, modelName);
+    } else {
+      throw err;
+    }
+  }
 
   const text = result.response.text();
   if (!text) {
@@ -761,6 +792,10 @@ async function analyzeWithGeminiVision(base64Data, mimeType, modelName) {
   return text;
 }
 
+// Chain-wide budget: stop trying further models once this much has elapsed so
+// a full 4-model failover still finishes inside the client's abort window.
+const VISION_CHAIN_BUDGET_MS = 120000;
+
 // MAIN EXPORT
 async function analyzeFoodImage(base64Data, mimeType = "image/jpeg") {
   // Normalize: callers may send a full data-URI or raw base64. Strip prefix
@@ -769,11 +804,16 @@ async function analyzeFoodImage(base64Data, mimeType = "image/jpeg") {
     ? String(base64Data).split(",").pop()
     : String(base64Data || "");
   const models = getVisionModels();
+  const chainDeadline = Date.now() + VISION_CHAIN_BUDGET_MS;
   let seenRetryable = false;
   let seenOther = false;
 
   for (let i = 0; i < models.length; i++) {
     const modelName = models[i];
+    if (Date.now() > chainDeadline) {
+      devWarn("[VITALIS IMAGE] Chain time budget exhausted — skipping remaining providers");
+      break;
+    }
     try {
       const raw = await analyzeWithGeminiVision(
         cleanBase64,
