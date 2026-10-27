@@ -33,6 +33,29 @@ if (typeof window !== "undefined") {
   });
 }
 
+/**
+ * Detect the install surface so the UI can show the right steps and CTA.
+ * iPhone/iPad get Home Screen instructions; Android and desktop get the
+ * browser install prompt plus the manual fallback.
+ * @returns {{ kind: "ios", inSafari: boolean } | { kind: "android" | "desktop" }}
+ */
+export const detectInstallPlatform = () => {
+  if (typeof navigator === "undefined") return { kind: "desktop" };
+  try {
+    const ua = navigator.userAgent || "";
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      const inSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+      return { kind: "ios", inSafari };
+    }
+    return { kind: /Android/.test(ua) ? "android" : "desktop" };
+  } catch {
+    return { kind: "desktop" };
+  }
+};
+
 /** The captured minimum beforeinstallprompt event, or null. */
 export const getInstallEvent = () => deferredPrompt;
 

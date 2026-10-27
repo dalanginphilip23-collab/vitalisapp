@@ -507,6 +507,263 @@ export const ProductTour = ({ open, onClose, onPrimary, isAuthenticated }) => {
   );
 };
 
+const INSTALL_DEVICES = [
+  { id: "ios", label: "iPhone / iPad", icon: "phone_iphone" },
+  { id: "android", label: "Android", icon: "android" },
+  { id: "desktop", label: "Computer", icon: "computer" },
+];
+
+const INSTALL_STEPS = {
+  ios: [
+    {
+      icon: "open_in_new",
+      title: "Open Vitalis in Safari",
+      copy: "On iPhone and iPad, only Safari can add a website to the Home Screen. Chrome, Firefox, and Edge can't install it.",
+      onlyWhen: (help) => !help?.inSafari,
+    },
+    {
+      icon: "ios_share",
+      title: "Tap the Share button",
+      copy: "It's the square with an arrow pointing up, at the bottom of Safari on iPhone or near the top on iPad.",
+    },
+    {
+      icon: "add_to_home_screen",
+      title: "Choose Add to Home Screen",
+      copy: "Scroll down in the share sheet and tap “Add to Home Screen”.",
+    },
+    {
+      icon: "check",
+      title: "Tap Add to confirm",
+      copy: "Vitalis now opens full screen from your Home Screen, just like a native app.",
+    },
+  ],
+  android: [
+    {
+      icon: "more_vert",
+      title: "Open the browser menu",
+      copy: "Tap the three-dot ⋮ menu in Chrome, Edge, or Samsung Internet.",
+    },
+    {
+      icon: "add_to_home_screen",
+      title: "Tap Add to Home screen",
+      copy: "Depending on your browser this may say “Install app” or “Add to Home screen”.",
+    },
+    {
+      icon: "check",
+      title: "Confirm the install",
+      copy: "Tap Add or Install. Vitalis then opens from your Home Screen like a native app.",
+    },
+  ],
+  desktop: [
+    {
+      icon: "downloading",
+      title: "Use the install icon",
+      copy: "In Chrome or Edge, look for the install icon in the address bar and click it.",
+    },
+    {
+      icon: "more_vert",
+      title: "Or open the browser menu",
+      copy: "Choose “Install Vitalis” (or “Apps → Install this site as an app”) from the ⋮ / ⋯ menu.",
+    },
+    {
+      icon: "open_in_new",
+      title: "Launch it like any app",
+      copy: "Vitalis opens in its own window from your desktop or Start menu. Other browsers work right here in the tab.",
+    },
+  ],
+};
+
+export const InstallStepsModal = ({
+  help,
+  onClose,
+  onPrimary,
+  onInstall,
+  canAutoInstall = false,
+  isAuthenticated,
+}) => {
+  const closeRef = useRef(null);
+  const [device, setDevice] = useState(help?.kind || "ios");
+  const [installNote, setInstallNote] = useState(null);
+  const [installing, setInstalling] = useState(false);
+
+  useEffect(() => {
+    if (!help) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => closeRef.current?.focus(), 40);
+    const handleKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKey);
+      window.clearTimeout(focusTimer);
+    };
+  }, [help, onClose]);
+
+  if (!help) return null;
+
+  const steps = (INSTALL_STEPS[device] || INSTALL_STEPS.desktop).filter(
+    (step) => !step.onlyWhen || step.onlyWhen(help)
+  );
+  const activeDevice = INSTALL_DEVICES.find((item) => item.id === device) || INSTALL_DEVICES[0];
+
+  const chooseDevice = (id) => {
+    setDevice(id);
+    setInstallNote(null);
+  };
+
+  const handleDownload = async () => {
+    if (!onInstall || installing) return;
+    setInstalling(true);
+    setInstallNote("Opening your browser's install prompt…");
+    try {
+      const result = await onInstall();
+      if (result === "accepted") {
+        setInstallNote("Install started — confirm the prompt to finish.");
+      } else if (result === "dismissed") {
+        setInstallNote("Install was cancelled. Tap Download to try again, or use the steps above.");
+      } else if (result === "installed") {
+        setInstallNote(null);
+      } else {
+        setInstallNote("This browser can't show the install prompt. Follow the steps above instead.");
+      }
+    } catch {
+      setInstallNote("The install prompt was blocked. Follow the steps above instead.");
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  return (
+    <div
+      className="nn-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="nn-modal nn-install-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nn-install-title"
+      >
+        <div className="nn-modal-top">
+          <p className="nn-modal-eyebrow">Vitalis · Add to home screen</p>
+          <button
+            ref={closeRef}
+            type="button"
+            className="nn-modal-close"
+            onClick={onClose}
+            aria-label="Close installation steps"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <div className="nn-install-heading">
+          <span className="nn-install-icon" aria-hidden="true">
+            <Icon name={activeDevice.icon} />
+          </span>
+          <div>
+            <h2 id="nn-install-title">Install Vitalis</h2>
+            <p>Free, full screen, and one tap away.</p>
+          </div>
+        </div>
+
+        <div className="nn-install-tabs" role="tablist" aria-label="Choose your device">
+          {INSTALL_DEVICES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={device === item.id}
+              className={`nn-install-tab ${device === item.id ? "is-active" : ""}`}
+              onClick={() => chooseDevice(item.id)}
+            >
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {device === "ios" && !help.inSafari ? (
+          <p className="nn-install-alert" role="note">
+            <Icon name="info" />
+            <span>
+              You're not in Safari. Open this page in <strong>Safari</strong> first — other
+              iPhone browsers can't add apps to the Home Screen.
+            </span>
+          </p>
+        ) : null}
+
+        <ol className="nn-install-steps">
+          {steps.map((step, index) => (
+            <li key={step.title}>
+              <span className="nn-install-step-num" aria-hidden="true">
+                {index + 1}
+              </span>
+              <span className="nn-install-step-icon" aria-hidden="true">
+                <Icon name={step.icon} />
+              </span>
+              <span className="nn-install-step-copy">
+                <strong>{step.title}</strong>
+                <small>{step.copy}</small>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        {device !== "ios" ? (
+          <div className="nn-install-download">
+            <button
+              type="button"
+              className="nn-install-download-btn"
+              onClick={handleDownload}
+              disabled={installing}
+            >
+              <span className="nn-install-download-label">
+                <Icon name={installing ? "downloading" : "download"} />
+                <span>{installing ? "Opening install…" : "Download Vitalis"}</span>
+              </span>
+              <span className="nn-install-download-arrow" aria-hidden="true">
+                <Icon name={installing ? "hourglass_top" : "arrow_downward"} />
+              </span>
+            </button>
+            <p className="nn-install-download-note">
+              {canAutoInstall
+                ? "One tap installs Vitalis through your browser — no app store needed."
+                : "If your browser doesn't show the install prompt, follow the steps above."}
+            </p>
+            {installNote ? (
+              <p className="nn-install-download-status" role="status">
+                {installNote}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="nn-install-actions">
+          {device === "ios" ? (
+            <button type="button" className="nn-info-primary" onClick={onClose}>
+              <span>Got it</span>
+              <span aria-hidden="true"><Icon name="check" /></span>
+            </button>
+          ) : (
+            <button type="button" className="nn-info-secondary" onClick={onClose}>
+              Close
+            </button>
+          )}
+          <button type="button" className="nn-info-secondary" onClick={onPrimary}>
+            {isAuthenticated ? "Open dashboard" : "Create free account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const FooterInfoModal = ({ info, onClose, onAction }) => {
   const closeRef = useRef(null);
 

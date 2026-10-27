@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { apiGet, apiPost } from "../../lib/apiClient.js";
-import { getInstallEvent, clearInstallEvent, subscribeToInstall } from "../../lib/pwaInstall.js";
+import { getInstallEvent, clearInstallEvent, subscribeToInstall, detectInstallPlatform } from "../../lib/pwaInstall.js";
 import { TermsOfUseModal, PrivacyPolicyModal } from "../../features/user/Auth/Register/components/LegalModals.jsx";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
 
@@ -21,6 +21,7 @@ import {
   HeroPhoneSet,
   DownloadPhoneSet,
   ProductTour,
+  InstallStepsModal,
   FooterInfoModal,
   FooterLink,
 } from "./components/LandingWidgets.jsx";
@@ -47,6 +48,9 @@ const Landing = () => {
   // Manual-install instructions panel (null = closed). Shown when the browser
   // can't prompt: iPhone Safari, Firefox, or a prompt already used this visit.
   const [installHelp, setInstallHelp] = useState(null);
+  // iPhone/iPad vs Android vs desktop. Used for the download CTA label and
+  // the initial tab inside the install modal.
+  const [installPlatform] = useState(() => detectInstallPlatform().kind);
   // True when the PWA is already running as an installed app (or the user just
   // accepted the install prompt). Then "Open on Home Screen" becomes a plain
   // open-dashboard action instead of trying to install again.
@@ -91,6 +95,8 @@ const Landing = () => {
   }, []);
 
   const closeFooterInfo = useCallback(() => setFooterInfo(null), []);
+
+  const closeInstallHelp = useCallback(() => setInstallHelp(null), []);
 
   const actOnFooterInfo = useCallback((info) => {
     setFooterInfo(null);
@@ -294,20 +300,7 @@ const Landing = () => {
   // Platform-aware manual install steps shown when the native prompt is
   // unavailable (iPhone Safari, Firefox, unsupported desktop browsers).
   const openInstallHelp = useCallback(() => {
-    try {
-      const ua = navigator.userAgent || "";
-      const isIOS =
-        /iPad|iPhone|iPod/.test(ua) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      if (isIOS) {
-        const onSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
-        setInstallHelp({ kind: "ios", inSafari: onSafari });
-        return;
-      }
-      setInstallHelp({ kind: /Android/.test(ua) ? "android" : "desktop" });
-    } catch {
-      setInstallHelp({ kind: "desktop" });
-    }
+    setInstallHelp(detectInstallPlatform());
   }, []);
 
   // Carousel controls
@@ -348,10 +341,17 @@ const Landing = () => {
     // Already installed (or running standalone): just open the app.
     if (installed) {
       navigate(isAuthenticated ? "/dashboard" : "/login");
-      return;
+      return "installed";
     }
     if (installEvent) {
-      installEvent.prompt();
+      try {
+        installEvent.prompt();
+      } catch {
+        setInstallEvent(null);
+        clearInstallEvent();
+        openInstallHelp();
+        return "unavailable";
+      }
       const choice = await installEvent.userChoice.catch(() => null);
       setInstallEvent(null);
       // Prompt is single-use per page load — keep the module state in sync.
@@ -363,15 +363,17 @@ const Landing = () => {
           /* private mode */
         }
         setInstalled(true);
-        return;
+        setInstallHelp(null);
+        return "accepted";
       }
       // Dismissed — no fake success; offer the manual steps instead.
       openInstallHelp();
-      return;
+      return "dismissed";
     }
     // No prompt available (iPhone Safari, Firefox, or already used this
     // session): show manual instructions here instead of navigating away.
     openInstallHelp();
+    return "unavailable";
   };
 
   const registerUrl =
@@ -704,98 +706,52 @@ const Landing = () => {
           <div className="nn-frame">
             <Reveal>
               <div className="nn-download-panel">
-                <h2 id="download-heading">
-                  Available Wherever<br />You Train
-                </h2>
-                <div className="nn-store-row">
-                  <button type="button" className="nn-store-badge is-lime" onClick={handleInstall}>
-                    <Icon name={installed ? "check_circle" : "add_to_home_screen"} />
-                    <span className="nn-store-copy">
-                      <small>{installEvent ? "Install now" : installed ? "Installed —" : "Open on"}</small>
-                      <strong>{installed ? "Open Vitalis" : "Home Screen"}</strong>
-                    </span>
-                  </button>
-                  <button type="button" className="nn-store-badge is-outline" onClick={goPrimary}>
-                    <Icon name="language" />
-                    <span className="nn-store-copy">
-                      <small>Works on</small>
-                      <strong>Any browser</strong>
-                    </span>
-                  </button>
-                </div>
-                {installHelp && !installed ? (
-                  <div className="nn-install-help" role="note" aria-live="polite">
-                    <div className="nn-install-help-head">
+                <div className="nn-download-copy">
+                  <h2 id="download-heading">
+                    Available Wherever<br />You Train
+                  </h2>
+                  <div className="nn-store-row">
+                    <button type="button" className="nn-store-badge is-lime" onClick={handleInstall}>
                       <Icon
                         name={
-                          installHelp.kind === "ios"
-                            ? "ios_share"
-                            : installHelp.kind === "android"
+                          installed
+                            ? "check_circle"
+                            : installPlatform === "ios"
                               ? "add_to_home_screen"
-                              : "downloading"
+                              : "download"
                         }
                       />
-                      <h4>
-                        {installHelp.kind === "ios"
-                          ? "Install from Safari"
-                          : installHelp.kind === "android"
-                            ? "Add to your home screen"
-                            : "Install Vitalis on your computer"}
-                      </h4>
-                      <button
-                        type="button"
-                        className="nn-install-help-close"
-                        onClick={() => setInstallHelp(null)}
-                        aria-label="Close installation instructions"
-                      >
-                        <Icon name="close" />
-                      </button>
-                    </div>
-                    {installHelp.kind === "ios" ? (
-                      <ol>
-                        {
-                          installHelp.inSafari ? null : (
-                            <li>Open this page in <strong>Safari</strong> first.</li>
-                          )
-                        }
-                        <li>
-                          Tap the <strong>Share</strong> icon{" "}
-                          <Icon name="ios_share" /> at the bottom of Safari.
-                        </li>
-                        <li>Scroll and choose <strong>Add to Home Screen</strong>.</li>
-                        <li>Tap <strong>Add</strong> to confirm.</li>
-                      </ol>
-                    ) : installHelp.kind === "android" ? (
-                      <ol>
-                        <li>Tap the <strong>⋮</strong> menu in your browser.</li>
-                        <li>
-                          Choose <strong>Add to Home screen</strong> (or{" "}
-                          <strong>Install app</strong>).
-                        </li>
-                        <li>
-                          Confirm — Vitalis then opens from your home screen
-                          like a native app.
-                        </li>
-                      </ol>
-                    ) : (
-                      <ol>
-                        <li>
-                          Look for the <strong>install icon</strong> in the
-                          address bar <Icon name="downloading" /> (Chrome, Edge).
-                        </li>
-                        <li>
-                          Or open the browser menu (<strong>⋮</strong> /{" "}
-                          <strong>⋯</strong>) → <strong>Install Vitalis</strong>.
-                        </li>
-                        <li>
-                          Other browsers run Vitalis right here — nothing to
-                          install.
-                        </li>
-                      </ol>
-                    )}
+                      <span className="nn-store-copy">
+                        <small>
+                          {installEvent
+                            ? "Install now"
+                            : installed
+                              ? "Installed —"
+                              : installPlatform === "ios"
+                                ? "Open on"
+                                : "Download"}
+                        </small>
+                        <strong>
+                          {installed
+                            ? "Open Vitalis"
+                            : installPlatform === "ios"
+                              ? "Home Screen"
+                              : "Vitalis app"}
+                        </strong>
+                      </span>
+                    </button>
+                    <button type="button" className="nn-store-badge is-outline" onClick={goPrimary}>
+                      <Icon name="language" />
+                      <span className="nn-store-copy">
+                        <small>Works on</small>
+                        <strong>Any browser</strong>
+                      </span>
+                    </button>
                   </div>
-                ) : null}
-                <DownloadPhoneSet />
+                </div>
+                <div className="nn-download-art">
+                  <DownloadPhoneSet />
+                </div>
               </div>
             </Reveal>
           </div>
@@ -940,6 +896,19 @@ const Landing = () => {
           isAuthenticated={isAuthenticated}
         />
       )}
+
+      <InstallStepsModal
+        key={installHelp ? `${installHelp.kind}-${installHelp.inSafari ? "safari" : "other"}` : "closed"}
+        help={installHelp}
+        onClose={closeInstallHelp}
+        onInstall={handleInstall}
+        canAutoInstall={!!installEvent}
+        onPrimary={() => {
+          closeInstallHelp();
+          goPrimary();
+        }}
+        isAuthenticated={isAuthenticated}
+      />
 
       <FooterInfoModal info={footerInfo} onClose={closeFooterInfo} onAction={actOnFooterInfo} />
 
