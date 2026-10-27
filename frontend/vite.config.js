@@ -157,7 +157,7 @@ export default defineConfig(({ mode }) => {
           timeout: 660000,
           configure: proxyErrorHandler,
         },
-        // AI failover can take ~2min: 120s entries listed before '/api'.
+        // AI failover can take ~2min: 180s entries listed before '/api'.
         ...Object.fromEntries(
           ['/api/coach', '/api/ai', '/api/ai-chat', '/api/analyze-pose', '/api/food-logs'].map(
             (p) => [
@@ -166,12 +166,20 @@ export default defineConfig(({ mode }) => {
                 target: backendTarget,
                 changeOrigin: true,
                 secure: false,
-                timeout: 120000,
+                timeout: 180000,
                 configure: proxyErrorHandler,
               },
             ]
           )
         ),
+        // Multer-stored images (/uploads/<category>/<file>.jpg) referenced by
+        // food_logs.image_url — served by the backend in dev too.
+        '/uploads': {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          configure: proxyErrorHandler,
+        },
         '/api': {
           target: backendTarget,
           changeOrigin: true,

@@ -4,19 +4,61 @@ const service = require("../services/foodLogs.service");
 const allergiesService = require("../services/allergies.service");
 const { sendMealSummaryEmail } = require("../services/email.service");
 const { AppError } = require("../utils/errors");
+const {
+  compressAndStore,
+  compressBufferAndStore,
+  compressImageBase64,
+} = require("../utils/upload");
 
 const { imageHash } = service;
 
 // POST /api/food-logs/analyze-pic
+// Accepts a multipart `image` file (preferred — goes through multer+sharp) OR
+// the legacy JSON { base64Image }. Both paths: compress to a ≤1600px JPEG
+// before the AI call, and store the photo so the response includes a stable
+// /uploads URL the meal log can reference (no more 8MB dataURLs in the DB).
 async function postanalyzePic(req, res, next) {
   try {
-    const { base64Image } = req.body;
-    if (!base64Image) return res.status(400).json({ error: "No image provided" });
-    if (String(base64Image).length > 7_000_000)
-      return res.status(413).json({ error: "Image too large (max ~5MB)" });
+    let aiImage = null; // base64 for Gemini
+    let imageUrl = null; // /uploads/food/... — returned to the client
+
+    if (req.file) {
+      try {
+        const stored = await compressAndStore(req.file, "food");
+        aiImage = stored.buffer.toString("base64");
+        imageUrl = stored.url;
+      } catch (err) {
+        console.error("[analyze-pic] compress failed:", err.message);
+        return next(new AppError("Could not process that image. Try another photo.", 400, "IMAGE_DECODE_FAILED"));
+      }
+    } else if (req.body?.base64Image) {
+      let base64 = String(req.body.base64Image);
+      // Legacy guard kept: absurd payloads get downsized, not rejected.
+      if (base64.length > 7_000_000) {
+        try {
+          const compressed = await compressImageBase64(base64);
+          base64 = compressed.base64;
+        } catch (err) {
+          console.error("[analyze-pic] compress failed:", err.message);
+          return next(new AppError("Image too large (max ~5MB) and could not be compressed.", 413, "IMAGE_TOO_LARGE"));
+        }
+      }
+      base64 = String(base64).includes(",") ? String(base64).split(",").pop() : String(base64);
+      try {
+        const stored = await compressBufferAndStore(Buffer.from(base64, "base64"), "food");
+        aiImage = stored.buffer.toString("base64");
+        imageUrl = stored.url;
+      } catch (err) {
+        console.error("[analyze-pic] encode/store failed:", err.message);
+        return next(new AppError("Could not process that image. Try another photo.", 400, "IMAGE_DECODE_FAILED"));
+      }
+    }
+
+    if (!aiImage) return res.status(400).json({ error: "No image provided" });
 
     try {
-      const { result, cached, joined } = await service.analyzeImage(base64Image);
+      const { result, cached, joined } = await service.analyzeImage(aiImage);
+      const payload = { ...result, ...(imageUrl ? { image_url: imageUrl } : {}) };
 
       if (cached) {
         if (process.env.NODE_ENV !== "production")
@@ -27,7 +69,7 @@ async function postanalyzePic(req, res, next) {
 
       // Allergy flagging is per-user, so it runs AFTER the shared, image-keyed
       // analysis. attachMatches never mutates the cached object.
-      res.json(await allergiesService.attachMatches(req.user.id, result));
+      res.json(await allergiesService.attachMatches(req.user.id, payload));
     } catch (err) {
       console.error("[analyze-pic] ERROR:", err.message);
       next(
@@ -91,6 +133,7 @@ async function postUserId(req, res, next) {
     if (typeof image_url === "string" && image_url.length > 2000) {
       return res.status(400).json({ error: "image_url too long (max 2000 chars)" });
     }
+    let finalImageUrl = image_url ?? null;
     for (const [k, v] of [
       ["calories", calories],
       ["protein", protein],
@@ -111,7 +154,21 @@ async function postUserId(req, res, next) {
       }
     }
 
-    const { insertId } = await service.saveFoodLog(userId, req.body || {});
+    // Multipart upload wins over any body-provided image_url: compress + store
+    // via multer/sharp and reference the short /uploads URL. This is how scan-
+    // saved meals attach their photo without 8MB dataURLs hitting the column.
+    // Runs after validation so a 400 can't leave an orphan file on disk.
+    if (req.file) {
+      try {
+        const stored = await compressAndStore(req.file, "food");
+        finalImageUrl = stored.url;
+      } catch (err) {
+        console.error("[food-log save] image store failed:", err.message);
+        // Photo is optional — log the meal, don't fail it on image trouble.
+      }
+    }
+
+    const { insertId } = await service.saveFoodLog(userId, { ...req.body, image_url: finalImageUrl });
     const { email, summary } = await service.getMealContext(userId);
 
     if (email) {

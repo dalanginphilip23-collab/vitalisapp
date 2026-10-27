@@ -91,7 +91,7 @@ export function cancelInflightRequests() {
 
 /**
  * @param {string} path
- * @param {{ timeoutMs?: number, skipAuthRedirect?: boolean, method?: string, signal?: AbortSignal | null, headers?: Record<string,string>, body?: string }} [options]
+ * @param {{ timeoutMs?: number, skipAuthRedirect?: boolean, method?: string, signal?: AbortSignal | null, headers?: Record<string,string>, body?: string | FormData | null }} [options]
  */
 export async function apiFetch(path, options = {}) {
   const {
@@ -144,13 +144,15 @@ async function doFetch(
   }
 
   const isBodyless = !rest.body || method === "GET" || method === "HEAD";
+  // FormData must keep its auto browser-set multipart boundary header.
+  const isFormData = typeof FormData !== "undefined" && rest.body instanceof FormData;
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
       credentials: "include",
       ...rest,
       signal: controller.signal,
       headers: {
-        ...(!isBodyless ? { "Content-Type": "application/json" } : {}),
+        ...(!isBodyless && !isFormData ? { "Content-Type": "application/json" } : {}),
         ...(rest.headers || {}),
       },
     });

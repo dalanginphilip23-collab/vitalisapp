@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Icon from '../../../../components/Icon.jsx';
 import Spinner from '../../../../components/ui/Spinner.jsx';
 import ErrorState from '../../../../components/feedback/ErrorState.jsx';
+import { resolveAssetUrl } from '../../../../app/config/env.js';
 
 const MEAL_META = {
   Breakfast: { icon: 'free_breakfast', className: 'breakfast' },
@@ -30,7 +31,7 @@ function MealThumbnail({ imageUrl, type }) {
     return (
       <img
         className="mt-meal-thumb mt-meal-thumb--image"
-        src={imageUrl}
+        src={resolveAssetUrl(imageUrl)}
         alt=""
         loading="lazy"
         onError={() => setFailed(true)}

@@ -54,7 +54,9 @@ function mountRoutes(app) {
   app.use('/api/plans', requireMember, plansRoutes);
   app.use('/api/profile', profileRoutes);
   app.use('/api', requireMember, aiRoutes);
-  app.use('/api/food-logs', requireMember, foodLogs);
+  // Meal tracker must work for admins too (scans + logs). Route-level
+  // verifyUser/requireOwner already guards every user-scoped endpoint here.
+  app.use('/api/food-logs', foodLogs);
   // Removed modules return 410 Gone for legacy clients.
   app.use('/api/clinic', (req, res) => res.status(410).json({ error: 'Virtual Clinic has been removed. Use AI Coach instead.', code: 'CLINIC_REMOVED' }));
   app.use('/api/atelier', (req, res) => res.status(410).json({ error: 'Atelier module has been removed.', code: 'ATELIER_REMOVED' }));

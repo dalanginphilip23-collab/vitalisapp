@@ -72,7 +72,9 @@ function backoffSleep(attempt, err) {
 }
 
 const AI_TEXT_TIMEOUT_MS = 25000;
-const AI_VISION_TIMEOUT_MS = 45000;
+// Env-tunable so deploys can trade latency for coverage. Default 30s keeps the
+// worst-case 4-model chain (~2min w/ backoff) inside the client's abort window.
+const AI_VISION_TIMEOUT_MS = Number.parseInt(process.env.AI_VISION_TIMEOUT_MS || "30000", 10) || 30000;
 
 // SDKs expose no AbortSignal: race caps a hung provider so it fails over
 // instead of parking the request (and its 10MB body) forever.
