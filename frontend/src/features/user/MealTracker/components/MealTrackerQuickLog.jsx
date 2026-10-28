@@ -151,32 +151,23 @@ export function ManualMealForm({
   form,
   setForm,
   error = '',
-  densityError = '',
   onClose = undefined,
   onSave = undefined,
   onCatalogPick = undefined,
   onNameChange = undefined,
   onWeightChange = undefined,
   onMacroChange = undefined,
-  onEstimate = undefined,
   onRecalculate = undefined,
   isLogging = false,
   isAnalyzing = false,
-  isEstimating = false,
   panelRef = undefined,
 }) {
-  const busy = isLogging || isAnalyzing || isEstimating;
+  const busy = isLogging || isAnalyzing;
   const hasDensity = Boolean(form.per100);
   const grams = normalizeGrams(form.grams);
   const basisLabel = form.servingLabel
     ? `${form.servingLabel}${form.servingGrams ? ` (${toInputValue(form.servingGrams)} g)` : ''} · `
     : '';
-  const sourceLabel =
-    form.densitySource === 'ai'
-      ? ' · AI estimate'
-      : form.densitySource === 'cache'
-        ? ' · cached estimate'
-        : '';
 
   return (
     <section className="mt-manual mt-panel" ref={panelRef} aria-labelledby="mt-manual-title">
@@ -246,7 +237,7 @@ export function ManualMealForm({
         <div className="mt-weight-block">
           <label className="mt-field mt-weight-field" htmlFor="meal-weight-input">
             <span className="mt-field-label">
-              Weight <span className="mt-field-suffix">g</span>
+              Weight <span className="mt-field-suffix">(g)</span>
             </span>
             <input
               id="meal-weight-input"
@@ -256,53 +247,35 @@ export function ManualMealForm({
               max="10000"
               step="any"
               inputMode="decimal"
-              placeholder={hasDensity ? 'e.g. 150' : 'Pick or estimate a food first'}
+              placeholder="e.g. 150"
               value={form.grams}
-              disabled={!hasDensity || busy}
-              aria-describedby="meal-density-hint"
+              disabled={busy}
+              aria-describedby="meal-weight-hint"
               onChange={(event) => onWeightChange?.(event.target.value)}
             />
           </label>
 
-          {hasDensity && (
-            <div className="mt-weight-chips" role="group" aria-label="Quick weights">
-              {WEIGHT_CHIPS.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  className={`mt-weight-chip ${grams === chip ? 'is-active' : ''}`}
-                  aria-pressed={grams === chip}
-                  aria-label={`Set weight to ${chip} grams`}
-                  disabled={busy}
-                  onClick={() => onWeightChange?.(String(chip))}
-                >
-                  {chip} g
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="mt-weight-chips" role="group" aria-label="Quick weights">
+            {WEIGHT_CHIPS.map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                className={`mt-weight-chip ${grams === chip ? 'is-active' : ''}`}
+                aria-pressed={grams === chip}
+                aria-label={`Set weight to ${chip} grams`}
+                disabled={busy}
+                onClick={() => onWeightChange?.(String(chip))}
+              >
+                {chip} g
+              </button>
+            ))}
+          </div>
 
-          <p className="mt-density-hint" id="meal-density-hint">
+          <p className="mt-density-hint" id="meal-weight-hint">
             {hasDensity
-              ? `${basisLabel}${toInputValue(form.per100.calories)} kcal · P ${toInputValue(form.per100.protein)} · C ${toInputValue(form.per100.carbs)} · F ${toInputValue(form.per100.fat)} per 100 g${sourceLabel}${grams ? '' : ' — reference serving shown; add a weight to scale.'}`
-              : 'Pick a suggestion or estimate nutrition to scale macros by weight.'}
+              ? `${basisLabel}${toInputValue(form.per100.calories)} kcal · P ${toInputValue(form.per100.protein)} · C ${toInputValue(form.per100.carbs)} · F ${toInputValue(form.per100.fat)} per 100 g${grams ? '' : ' — reference serving shown; add a weight to scale.'}`
+              : 'Optional. Weight is saved in grams — pick a suggestion to auto-fill macros.'}
           </p>
-
-          {!hasDensity && (
-            <button
-              type="button"
-              className="mt-density-action"
-              onClick={onEstimate}
-              disabled={busy}
-            >
-              {isEstimating ? (
-                <Spinner className="mt-density-spinner" />
-              ) : (
-                <Icon name="auto_awesome" className="mt-density-icon" />
-              )}
-              <span>{isEstimating ? 'Estimating nutrition…' : 'Estimate nutrition'}</span>
-            </button>
-          )}
 
           {hasDensity && form.macroOverride && (
             <button
@@ -314,12 +287,6 @@ export function ManualMealForm({
               <Icon name="restart_alt" className="mt-density-icon" />
               <span>Recalculate from weight</span>
             </button>
-          )}
-
-          {densityError && (
-            <p className="mt-density-error" role="alert">
-              {densityError}
-            </p>
           )}
         </div>
 

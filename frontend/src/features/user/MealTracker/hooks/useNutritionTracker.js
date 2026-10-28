@@ -95,16 +95,6 @@ async function apiSaveFoodLog(userId, meal, imageBlob) {
   });
 }
 
-// Per-100 g density for a typed dish name (manual form). AI-backed and cached
-// server-side; slow first call, instant afterwards.
-async function apiEstimateFoodDensity(foodName) {
-  return apiFetch(`/api/food-logs/estimate-density`, {
-    method: 'POST',
-    body: JSON.stringify({ food_name: foodName }),
-    timeoutMs: 60000,
-  });
-}
-
 async function apiFetchFoodLogs(userId) {
   return apiFetch(`/api/food-logs/${userId}`);
 }
@@ -223,14 +213,6 @@ export function useNutritionTracker(USER_ID) {
   };
 
   const clearResult = useCallback(() => setResult(null), []);
-
-  // Manual form: AI per-100 g density for dishes missing from the catalog.
-  // Errors bubble to the form so it can render an inline retry next to the
-  // weight field instead of a toast that hides the field in use.
-  const estimateFoodDensity = useCallback(
-    (foodName) => apiEstimateFoodDensity(foodName),
-    [],
-  );
 
   const toggleItem = useCallback((key) => {
     setResult(prev => {
@@ -413,6 +395,5 @@ export function useNutritionTracker(USER_ID) {
     toast, summarySeed,
     lastLoggedMeal,
     handleAnalyze, handleLog, handleLogSelected, toggleItem, scaleSelected, editItem, addCustomItem, clearResult, handleDeleteMeal, setToast,
-    estimateFoodDensity,
   };
 }
